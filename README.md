@@ -44,26 +44,28 @@ https://ibm.biz/TORCSQuickStartExt
 - Windows: Supported directly  
 - Mac: Use Wine (https://www.winehq.org/)  
 
-### 5. Set Up Python
-Install the latest version of Python 3:
-```bash
-python --version
+### 5. Emplay IBM Granite
+https://www.youtube.com/watch?v=om7CPsX8HlI
+https://ibm.box.com/v/TorcsOllamaInstructions
 
 
 ### 6. Build the AI Driver
-Use Python to implement the driver
-Integrate logic for:
-Steering
-Acceleration
-Braking
-Use IBM Granite to enhance decision-making
+Use Python to implement the driver and integrate logic for:
+
+- Steering
+
+- Acceleration
+
+- Braking
+
+- Use IBM Granite to enhance decision-making
 
 ### 7. Test and Run
 Run the AI driver inside TORCS
 Test performance on the Corkscrew track
 Continuously improve lap time and stability
 
-### Submission Requirements
+## Submission Requirements
 
 1. Fastest Lap Video
 Show only the fastest lap
@@ -92,23 +94,13 @@ Team video
 GitHub repo
 Race details
 
-### Project Structure
-/driver        # AI driver logic
-/config        # Configuration files
-/utils         # Helper functions
-/main.py       # Entry point
 
-### How It Works
 
-The AI driver:
-Receives sensor data from TORCS
-Processes track and car state
-Decides control actions
-Sends commands back to the simulator
-
-### Useful Links
+## Useful Links
 TORCS Reference: https://ibm.box.com/v/TORCSReference
+
 Quick Start: https://ibm.biz/TORCSQuickStart
+
 Submission Form: https://ibm.biz/TORCSForm
 
 ### Demo
