@@ -44,12 +44,13 @@ except ImportError as exc:
     sys.exit(1)
 
 
-TARGET_SPEED_KMH = 80.0
-STEERING_GAIN = 0.10
+TARGET_SPEED_KMH = 55.0
+STEER_LOCK = 0.785398
 TRACK_POS_BIAS = 0.5
+OFFTRACK_RECOVERY_STEER = 0.5
 GEAR_UP_RPM = 7000
 GEAR_DOWN_RPM = 3000
-MAX_STEPS = 2000
+MAX_STEPS = 5000
 
 
 def pick_gear(state: dict) -> int:
@@ -67,7 +68,10 @@ def drive(state: dict) -> dict:
     track_pos = float(state.get("trackPos", 0.0))
     speed_x = float(state.get("speedX", 0.0))
 
-    steer = STEERING_GAIN * (angle - track_pos * TRACK_POS_BIAS)
+    if abs(track_pos) > 1.0:
+        steer = -OFFTRACK_RECOVERY_STEER if track_pos > 0 else OFFTRACK_RECOVERY_STEER
+    else:
+        steer = (angle - track_pos * TRACK_POS_BIAS) / STEER_LOCK
     steer = max(-1.0, min(1.0, steer))
 
     if speed_x < TARGET_SPEED_KMH:
