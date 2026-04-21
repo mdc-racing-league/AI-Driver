@@ -73,20 +73,35 @@ Fully documented in `docs/simulation-guide/03-running-our-driver.md`.
 
 ---
 
+## Update — Apr 21 PM: `driver_baseline.py` done
+
+Shipped the first real custom driver tonight. Three commits (`d9aeb4f`, `7091c72`, `379c7bb`) to get it from "crashes on first tick" → "finishes the race in P1 with 2–3 clean laps on Corkscrew."
+
+What it does:
+- Opens a UDP session to `scr_server` on port 3001
+- Reads sensor dict (`angle`, `trackPos`, `speedX`, `rpm`) per tick
+- Steers using canonical SCR formula: `(angle - trackPos * 0.5) / STEER_LOCK`, with an explicit off-track recovery mode for `|trackPos| > 1.0`
+- Holds target speed ~55 km/h (conservative — Corkscrew has a hairpin)
+- RPM-based gear shift (up at 7000, down at 3000)
+
+Run 001 numbers (`telemetry/baseline.md`): 210 sim-seconds, 10,200 ticks, `trackPos` stayed in ±0.66 (never left the track), finished P1.
+
+Still TODO: per-lap time logging (currently only total) and fixing the ghost-tick loop after race end. Both are next-session items, not correctness bugs.
+
 ## What's next
 
-1. **Tonight (Apr 21):** start writing `src/driver_baseline.py` — a proper Python class that replaces snakeoil3's demo controller and drives a clean Corkscrew lap using sensor-threshold rules. (Smoke test was supposed to be tonight's goal; instead it ran this morning ahead of schedule.)
-2. **Phase 2 core work** (originally May 4–14, now starting Apr 21): extended telemetry logger that reads from the `snakeoil3.state` dict per tick; wire `scripts/run_race.py` full impl to orchestrate both processes; 5-lap average baseline time recorded.
-3. **Then:** first labeled run archives → validator enforces schema → `telemetry/runs/` becomes a dataset we can show Granite for Phase 3 tuning.
+1. Fix `driver_baseline.py` race-end detection + log `lastLapTime` so Run 002 gives us a real per-lap number
+2. **Phase 2 core work** (originally May 4–14, now active): extended SCHEMA v0.2 telemetry logger that reads from `snakeoil3.state` per tick; wire `scripts/run_race.py` to orchestrate both processes; 5-lap average baseline recorded
+3. **Then:** first labeled run archives → validator enforces schema → `telemetry/runs/` becomes a dataset we feed Granite for Phase 3 tuning
 
 ---
 
 ## Schedule status
 
-- **Velocity buffer: +7 days** ahead of original plan (was +6; Phase 2 Day 1 smoke test came in ~9 days early, banked 1 extra buffer day)
+- **Velocity buffer: +9 days** ahead of original plan (was +7; tonight's driver_baseline.py ship banks 2 more days — the main Phase 2 deliverable landed on Apr 21 instead of May 4)
 - **Phase 1 Track A** (solo code prep): shipped in one session, all 7 items complete (validator + tests, segment map, 3 script skeletons, kickoff doc)
 - **Phase 1 local env**: TORCS + Granite + Continue + repo + Python deps + end-to-end smoke test all verified on the dev machine as of 2026-04-21 AM. Fully closed.
-- **Phase 2 Day 1**: smoke test passed pre-schedule. Real work (writing `driver_baseline.py`) starts tonight.
+- **Phase 2 Day 1**: smoke test passed pre-schedule, then `driver_baseline.py` v1 written, tuned, and raced to a P1 finish on Corkscrew — all in one evening.
 
 Target submission: **2026-07-01** · Internal buffer target: submit by **2026-06-28**.
 
