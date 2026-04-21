@@ -6,6 +6,8 @@ First-cut timing reference for `src/driver_baseline.py` on Corkscrew. Subsequent
 
 ### Run 001 — 2026-04-21 PM (driver_baseline.py v1, commit `379c7bb`)
 
+**Baseline lap time: `3:32.92` (212.92 s) on Corkscrew, no damages, no pit stops.** Evidence: `docs/screenshots/2026-04-21_phase2-day1-p1-finish.png` (TORCS Race Results screen).
+
 | Field | Value |
 |---|---|
 | Track | Corkscrew (road) |
@@ -13,20 +15,25 @@ First-cut timing reference for `src/driver_baseline.py` on Corkscrew. Subsequent
 | Start | Standing start, grid pole |
 | Driver | `scr_server 1` → `src/driver_baseline.py` |
 | Target speed | 55 km/h (set in constants) |
-| Finishing order | **P1** (solo, but race completed cleanly) |
-| Race duration (sim) | ~210 sim-seconds |
-| Steps until `scr_server` ended race | 10,200 |
-| Laps completed | 2–3 (exact count not logged yet — add in Run 002) |
-| Peak `trackPos` | +0.66 |
-| Min `trackPos` | −0.66 |
+| Finishing order | **P1** |
+| **Lap time (best = total)** | **`3:32.92`** |
+| Laps completed | **1** |
+| Top speed observed | 65 km/h |
+| Damages | **0** |
+| Pit stops | 0 |
+| Peak `trackPos` (per driver log) | +0.66 |
+| Min `trackPos` (per driver log) | −0.66 |
 | Left the track? | No |
-| Observed speed range | 55–65 km/h |
 
 ### Known limitations of Run 001
 
-1. **Per-lap time not captured.** Driver logs `curLapTime` per tick but not `lastLapTime` — we know total sim duration but not individual lap times. Fix planned before Run 002.
-2. **Loop doesn't exit on race end.** Python driver kept iterating 90k empty ticks after `scr_server` shut down. Doesn't affect race validity, but makes log noisy.
+1. **Per-lap time captured via TORCS scoreboard, not driver log.** Driver logs `curLapTime` per tick but not `lastLapTime`. Ground truth came from the Race Results screen. Fix planned before Run 002 so we can compute segment-level splits.
+2. **Loop doesn't exit on race end.** Python driver kept iterating ~90k empty ticks after `scr_server` shut down. Doesn't affect race validity, but makes the log noisy.
 3. **Off-track recovery never triggered.** `|trackPos|` stayed ≤ 0.66 — car never reached the recovery threshold (1.0). Recovery code is untested in-anger.
+
+### Target for Phase 3 tuning
+
+Mission brief requires a **-15% improvement vs. baseline** before Phase 4. That means Phase 3 must deliver **≤ 3:00.98** on Corkscrew (≤ 180.98 s). Current headroom: raise target speed, segment-aware braking/throttle, possibly a PID on heading instead of pure P.
 
 ### Why 55 km/h as baseline target
 
