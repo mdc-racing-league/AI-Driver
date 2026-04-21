@@ -68,7 +68,7 @@ The IBM bundle uses the **Simulated Car Racing (SCR) architecture**: TORCS ships
 ## Phase 2 — Baseline AI driver (Apr 30 – May 14) — *pulled forward 4 days*
 
 - ✅ **Day 1 smoke test:** ran `python snakeoil3_gym.py` against a live `scr_server` race on Corkscrew — full Python→UDP→TORCS loop verified end-to-end (2026-04-21 AM). Demo controller drives poorly but that's expected; screenshot archived in `docs/screenshots/`.
-- ✅ Implement `src/driver_baseline.py` as a `snakeoil3` subclass — completes clean Corkscrew laps (2026-04-21 PM). Finishing order: **P1**. 2–3 clean laps over 210 sim-seconds. `trackPos` stayed in `[-0.66, +0.66]` (never left the track). Canonical SCR steering `(angle - trackPos*0.5) / STEER_LOCK` + off-track recovery mode. Commits: `d9aeb4f`, `7091c72`, `379c7bb`. See `telemetry/baseline.md` for run data.
+- ✅ Implement `src/driver_baseline.py` as a `snakeoil3` subclass — completes a clean Corkscrew lap (2026-04-21 PM). Finishing **P1** with lap time **`3:32.92`**, damages **0**, top speed 65 km/h. `trackPos` stayed in `[-0.66, +0.66]` (never left the track). Canonical SCR steering `(angle - trackPos*0.5) / STEER_LOCK` + off-track recovery mode. Commits: `d9aeb4f`, `7091c72`, `379c7bb`. Evidence: `docs/screenshots/2026-04-21_phase2-day1-p1-finish.png`. Full run data: `telemetry/baseline.md`.
 - ⬜ Extended telemetry logger (SCHEMA v0.2 fields) — reads from `snakeoil3.state` dict per tick; replaces v0.1 in `scripts/log_telemetry.py`
 - ⬜ Wire `scripts/run_race.py` full impl — orchestrates both `wtorcs.exe` + Python client, handles the two-process startup
 - ⬜ Test harness: 5-lap average, same start conditions — `scripts/run_race.py --laps 5`
@@ -84,7 +84,7 @@ The IBM bundle uses the **Simulated Car Racing (SCR) architecture**: TORCS ships
 - ⬜ Wire `scripts/label_segments.py` and `scripts/ab_run.py` full impls
 - ⬜ Granite-assisted code review (chat mode) — capture suggestions in `docs/granite-suggestions.md`
 - ⬜ A/B test every change against baseline; only keep improvements; maintain `telemetry/leaderboard.md`
-- ⬜ **Target: lap time -15% vs baseline, zero crashes over 10 consecutive runs**
+- ⬜ **Target: lap time -15% vs baseline → ≤ `3:00.98` on Corkscrew, zero crashes over 10 consecutive runs** (baseline: `3:32.92` from Run 001)
 
 ## Phase 4 — Polish & differentiate (June 5 – June 21) — *starts 3 days earlier, ends same date = +3-day buffer*
 
@@ -115,7 +115,7 @@ Tracks how far ahead (+) or behind (−) the original plan we are. Update whenev
 | 2026-04-21 (local env + TORCS up) | **+6 days** | Same day: Continue+Granite working on Windows; TORCS installed, Corkscrew loads. SCR/snakeoil3 architecture discovered → Phase 2 simpler than originally scoped (Python client, not C++ robot). |
 | 2026-04-21 AM (Phase 1 Track B closed) | **+6 days** | 20-min morning session: repo cloned locally, Python 3.12.10 verified, `gym==0.26.2` installed. Discovered `snakeoil3_gym.py` is pure stdlib — tonight's smoke test has no prep. Only remaining Track B item is reading docs/schema end-to-end. |
 | 2026-04-21 AM (Phase 2 Day 1 done early) | **+6 → +7 days** | Pre-work smoke test passed on first try: Python→UDP→TORCS round-trip verified, car driven around Corkscrew under snakeoil3 demo control. Phase 2 Day 1 goal achieved ~9 days ahead of original plan. Next: actually write `src/driver_baseline.py`. Evidence: `docs/screenshots/2026-04-21_phase1-smoke-test-success.png`. |
-| 2026-04-21 PM (`driver_baseline.py` shipped) | **+7 → +9 days** | First real custom driver completes 2–3 clean laps on Corkscrew and finishes in **1st place**. 3 iterations tonight: scalar-vs-list action fix, then canonical SCR steering formula + 55 km/h target + off-track recovery. `trackPos` stayed on-track the full race. Phase 2's main deliverable reached — next session is telemetry logger + run archive wiring, not driver correctness. |
+| 2026-04-21 PM (`driver_baseline.py` shipped) | **+7 → +9 days** | First real custom driver completes a clean Corkscrew lap and finishes in **1st place** with lap time **`3:32.92`**, damages **0**. 3 iterations tonight: scalar-vs-list action fix, then canonical SCR steering formula + 55 km/h target + off-track recovery. `trackPos` stayed on-track the full race. Phase 2's main deliverable reached — next session is telemetry logger + run archive wiring, not driver correctness. Phase 3's target is now concrete: ≤ `3:00.98` (-15% vs baseline). Evidence: `docs/screenshots/2026-04-21_phase2-day1-p1-finish.png`. |
 | — | — | — |
 
 **Escalation rule:** if buffer drops below **+0 days** (on-schedule or behind) at any phase boundary, pause and replan. Do not compress by cutting scope without team discussion.

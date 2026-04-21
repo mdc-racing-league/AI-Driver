@@ -84,7 +84,7 @@ What it does:
 - Holds target speed ~55 km/h (conservative — Corkscrew has a hairpin)
 - RPM-based gear shift (up at 7000, down at 3000)
 
-Run 001 numbers (`telemetry/baseline.md`): 210 sim-seconds, 10,200 ticks, `trackPos` stayed in ±0.66 (never left the track), finished P1.
+Run 001 numbers (`telemetry/baseline.md`): **lap time `3:32.92`**, damages **0**, top speed 65 km/h, finished **P1**. `trackPos` stayed in ±0.66 the full race (never left the track). Phase 3 target is now concrete — we need to beat `3:00.98` (-15% of baseline) to hit the rubric. Evidence: `docs/screenshots/2026-04-21_phase2-day1-p1-finish.png` (TORCS Race Results screen).
 
 Still TODO: per-lap time logging (currently only total) and fixing the ghost-tick loop after race end. Both are next-session items, not correctness bugs.
 
