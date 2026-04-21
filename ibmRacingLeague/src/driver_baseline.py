@@ -51,7 +51,7 @@ OFFTRACK_RECOVERY_STEER = 0.5
 GEAR_UP_RPM = 7000
 GEAR_DOWN_RPM = 3000
 MAX_STEPS = 20000
-GHOST_TICK_LIMIT = 400
+STALE_LAP_LIMIT = 400
 
 
 def pick_gear(state: dict) -> int:
@@ -114,13 +114,14 @@ def main() -> int:
 
     step = 0
     race_started = False
-    ghost_ticks = 0
+    stale_lap_ticks = 0
     lap_splits: list[float] = []
     last_lap_seen = 0.0
+    last_cur_lap = 0.0
     stop_reason = "maxSteps reached"
 
     try:
-        for step in range(client.maxSteps if hasattr(client, "maxSteps") else MAX_STEPS):
+        for step in range(MAX_STEPS):
             client.get_servers_input()
             sensors = {k: first_scalar(v) for k, v in client.S.d.items()}
 
@@ -130,19 +131,29 @@ def main() -> int:
 
             if last_lap > 0 and abs(last_lap - last_lap_seen) > 1e-3:
                 lap_splits.append(last_lap)
-                print(f"[driver_baseline] LAP {len(lap_splits)} complete: {last_lap:.3f}s")
+                print(f"[driver_baseline] LAP {len(lap_splits)} complete (lastLapTime): {last_lap:.3f}s")
                 last_lap_seen = last_lap
+
+            if last_cur_lap > 30.0 and cur_lap < 2.0 and cur_lap < last_cur_lap - 10.0:
+                lap_splits.append(last_cur_lap)
+                print(f"[driver_baseline] LAP {len(lap_splits)} complete (curLapTime reset): {last_cur_lap:.3f}s")
 
             if cur_lap > 0.1:
                 race_started = True
 
-            if race_started and cur_lap == 0.0 and abs(speed_x) < 0.1:
-                ghost_ticks += 1
-                if ghost_ticks >= GHOST_TICK_LIMIT:
-                    stop_reason = f"race ended ({ghost_ticks} stale ticks)"
-                    break
-            else:
-                ghost_ticks = 0
+            if race_started:
+                if abs(cur_lap - last_cur_lap) < 1e-4:
+                    stale_lap_ticks += 1
+                    if stale_lap_ticks >= STALE_LAP_LIMIT:
+                        if not lap_splits or abs(lap_splits[-1] - cur_lap) > 0.5:
+                            lap_splits.append(cur_lap)
+                            print(f"[driver_baseline] LAP {len(lap_splits)} complete (final, on race-end): {cur_lap:.3f}s")
+                        stop_reason = f"race ended (curLapTime frozen at {cur_lap:.2f}s for {stale_lap_ticks} ticks)"
+                        break
+                else:
+                    stale_lap_ticks = 0
+
+            last_cur_lap = cur_lap
 
             action = drive(sensors)
             for k, v in action.items():
