@@ -83,13 +83,13 @@ def drive(state: dict) -> dict:
     gear = pick_gear(state)
 
     return {
-        "steer": [steer],
-        "accel": [accel],
-        "brake": [brake],
-        "gear": [gear],
-        "clutch": [0.0],
+        "steer": steer,
+        "accel": accel,
+        "brake": brake,
+        "gear": gear,
+        "clutch": 0.0,
         "focus": [-90, -45, 0, 45, 90],
-        "meta": [0],
+        "meta": 0,
     }
 
 
