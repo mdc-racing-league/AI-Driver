@@ -1,25 +1,33 @@
-# Video Notes Skill Project
+# IBM AI Racing League — Team Entry
 
-A project for extracting, organizing, and sharing notes from educational video tutorials, with a focus on GIMP and other faculty-relevant content. Built for collaboration and extensibility.
+Our submission for the **IBM AI Racing League** Late Season Race Festival.
+Building a Python AI race-car driver for **TORCS** (The Open Race Car Simulator),
+powered by **IBM Granite** models served locally via **Ollama** and accessed in
+VSCode through the **continue.dev** extension.
 
-## Folders
-- `Skills/video-notes/` — The Zo Skill (spec + scripts)
-- `notes/` — Markdown notes generated from videos
+- **Track:** Corkscrew (standing start)
+- **Submission deadline:** 2026-07-01
+- **Team lead:** Louis Rodriguez ([@LouisRodriguez12101815](https://github.com/LouisRodriguez12101815))
 
-## How It Works
-1. Add a YouTube (or other) video link to the skill.
-2. The skill/script generates a summary, transcript, and bullet notes.
-3. Markdown notes saved in `notes/`, ready to share with faculty, on Teams, or GitHub.
+## Repo map
 
-## Usage
-- Run the Zo Skill manually or automate in the future.
-- Edit notes as needed to add personal faculty insights or highlights.
+```
+ibmRacingLeague/
+├── src/           # Python driver code
+├── scripts/       # Setup scripts, Granite helpers, telemetry tools
+├── docs/          # Mission brief + setup docs + roadmap
+├── telemetry/     # Lap telemetry summaries (raw is gitignored)
+├── videos/        # Video scripts / edit notes (binaries gitignored)
+└── blog/          # Blog post drafts (Medium/WordPress)
+```
 
-## How to Contribute
-- Add new video links by request/documentation.
-- Improve scripts, templates, or existing notes.
-- Submit pull requests for fixes or enhancements.
+## Quick links
 
----
+- [Roadmap & phase plan](ibmRacingLeague/docs/roadmap.md)
+- [Setup guide for teammates](ibmRacingLeague/docs/setup.md)
+- [Mission brief (IBM)](ibmRacingLeague/docs/TORCSRegtoSubmission0901-Mission%20Brief-Detailed%20(1).pdf)
+- [Ollama/Granite helper (IBM)](ibmRacingLeague/docs/Wtorcs-ollama-instructions.pdf)
 
-*Scaffolded by Zo Project Manager persona for mickeypress. Next step: implement scripts for transcript extraction and note-taking!*
+## Status
+
+See [roadmap.md](ibmRacingLeague/docs/roadmap.md) — updated as phases complete.

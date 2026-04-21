@@ -1,8 +1,27 @@
-# Ignore everything by default
+# Ignore everything by default — this workspace has personal files
 *
 
-# But do NOT ignore these!
+# Track only the IBM Racing League project
 !.gitignore
 !README.md
-!Skills/
-!notes/
+!ibmRacingLeague/
+!ibmRacingLeague/**
+
+# Within the project, ignore common junk
+ibmRacingLeague/**/__pycache__/
+ibmRacingLeague/**/*.pyc
+ibmRacingLeague/**/.venv/
+ibmRacingLeague/**/node_modules/
+ibmRacingLeague/**/.DS_Store
+
+# Ignore large video files (track via external storage / GitHub Releases)
+ibmRacingLeague/videos/*.mp4
+ibmRacingLeague/videos/*.mov
+ibmRacingLeague/videos/*.avi
+
+# Ignore raw telemetry dumps (keep summaries)
+ibmRacingLeague/telemetry/raw/
+
+# Local-only artifacts (not shared via git)
+ibmRacingLeague/backups/
+ibmRacingLeague/logs/
