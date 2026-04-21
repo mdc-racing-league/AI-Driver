@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Telemetry — raw sim output (never commit; use runs/ archives instead)
+telemetry/raw.log
+telemetry/frames.csv
+telemetry/baseline-commands.log
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Local continue.dev config (per-user)
+.continue/

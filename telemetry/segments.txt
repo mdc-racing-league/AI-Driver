@@ -1,0 +1,27 @@
+# Canonical Corkscrew segment map (draft)
+# One segment_id per line. Lines starting with # are comments.
+# Finalize during Phase 1 Track A from track reference data.
+# Consumers: scripts/validate_run.py, scripts/segment_tagger.py (Phase 2),
+#            scripts/label_segments.py (Phase 3)
+#
+# When the track reference data is finalized, replace these with real IDs
+# tied to distance-along-centerline bucket ranges.
+
+s00_start_straight
+s01_turn1_entry
+s02_turn1_apex
+s03_exit_to_turn2
+s04_turn2
+s05_turn3_entry
+s06_turn3_apex
+s07_turn4
+s08_turn5_entry
+s09_turn5_apex
+s10_mid_section
+s11_turn6
+s12_turn7
+s13_uphill_straight
+s14_corkscrew_entry
+s15_corkscrew_drop
+s16_corkscrew_exit
+s17_final_straight
