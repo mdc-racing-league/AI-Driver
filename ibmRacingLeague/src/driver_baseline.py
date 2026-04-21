@@ -50,7 +50,8 @@ TRACK_POS_BIAS = 0.5
 OFFTRACK_RECOVERY_STEER = 0.5
 GEAR_UP_RPM = 7000
 GEAR_DOWN_RPM = 3000
-MAX_STEPS = 5000
+MAX_STEPS = 20000
+GHOST_TICK_LIMIT = 400
 
 
 def pick_gear(state: dict) -> int:
@@ -112,10 +113,37 @@ def main() -> int:
     client.MAX_STEPS = MAX_STEPS
 
     step = 0
+    race_started = False
+    ghost_ticks = 0
+    lap_splits: list[float] = []
+    last_lap_seen = 0.0
+    stop_reason = "maxSteps reached"
+
     try:
         for step in range(client.maxSteps if hasattr(client, "maxSteps") else MAX_STEPS):
             client.get_servers_input()
             sensors = {k: first_scalar(v) for k, v in client.S.d.items()}
+
+            cur_lap = float(sensors.get("curLapTime", 0.0) or 0.0)
+            last_lap = float(sensors.get("lastLapTime", 0.0) or 0.0)
+            speed_x = float(sensors.get("speedX", 0.0) or 0.0)
+
+            if last_lap > 0 and abs(last_lap - last_lap_seen) > 1e-3:
+                lap_splits.append(last_lap)
+                print(f"[driver_baseline] LAP {len(lap_splits)} complete: {last_lap:.3f}s")
+                last_lap_seen = last_lap
+
+            if cur_lap > 0.1:
+                race_started = True
+
+            if race_started and cur_lap == 0.0 and abs(speed_x) < 0.1:
+                ghost_ticks += 1
+                if ghost_ticks >= GHOST_TICK_LIMIT:
+                    stop_reason = f"race ended ({ghost_ticks} stale ticks)"
+                    break
+            else:
+                ghost_ticks = 0
+
             action = drive(sensors)
             for k, v in action.items():
                 client.R.d[k] = v
@@ -123,18 +151,29 @@ def main() -> int:
             if step % 200 == 0:
                 print(
                     f"[driver_baseline] step={step} "
-                    f"speed={sensors.get('speedX', 0):.1f} "
+                    f"speed={speed_x:.1f} "
                     f"trackPos={sensors.get('trackPos', 0):.2f} "
-                    f"lapTime={sensors.get('curLapTime', 0):.2f}"
+                    f"lapTime={cur_lap:.2f}"
                 )
     except KeyboardInterrupt:
+        stop_reason = "KeyboardInterrupt"
         print("\n[driver_baseline] interrupted by user")
     finally:
         try:
             client.shutdown()
         except Exception:
             pass
-        print(f"[driver_baseline] finished after {step} steps")
+        print(f"[driver_baseline] finished after {step} steps — {stop_reason}")
+        if lap_splits:
+            best = min(lap_splits)
+            total = sum(lap_splits)
+            print(f"[driver_baseline] laps completed: {len(lap_splits)}")
+            for i, t in enumerate(lap_splits, 1):
+                marker = " (best)" if t == best else ""
+                print(f"[driver_baseline]   lap {i}: {t:.3f}s{marker}")
+            print(f"[driver_baseline] total: {total:.3f}s  best: {best:.3f}s")
+        else:
+            print("[driver_baseline] no laps recorded (lastLapTime never advanced)")
 
     return 0
 
