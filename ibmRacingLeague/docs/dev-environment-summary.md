@@ -96,10 +96,19 @@ Three iterations across 4 runs (`7fcfab3`, `1d2b003`, `9e1d1c3`) replaced both i
 - **Race-end detection works.** Keyed on **stale `curLapTime`**, not on speed/lapTime zeros. Learned the hard way that after a race ends, `scr_server` keeps sending the **final frame frozen** (speed 64.8 km/h, lapTime 212.81 s) forever — zeros never come. With the new detector, loop exits at step ~10,700 instead of running to 99,999.
 - **Run 002 (canonical):** `3:32.81` (`212.806 s`) from the driver log, matches scoreboard to 0.01 s. **Cross-run check across 4 runs: 0.144 s spread (0.068%)** — TORCS + our controller are effectively deterministic, so Phase 3 A/B comparisons can trust single-run deltas down to ~0.1 s. Evidence: `docs/screenshots/2026-04-22_phase2-day1-run002-clean.png`.
 
+## Submission format — resolved 2026-04-22
+
+Walked the live form at `https://forms.office.com/r/gD0gMZaTwP`. Field #6 is verbatim: **`"Standing start lap time - used to determine who qualifies"`**. So:
+
+- Judging metric = **one standing-start lap on Corkscrew with the IBM F1 car** (form wording: *"Once your Corkscrew time trial is complete with the IBM F1 car"*). Not a race, not an N-lap average.
+- Our 1-lap Quick Race setup is exactly the right regime. No 5-lap harness needed.
+- **Three previously-unscoped deliverables** surfaced from the form fields and are now in the roadmap: verify the IBM F1 car is what `scr_server` uses, create a bespoke F1 livery (uni logo + team identifier), and assemble a presentation deck of completed SkillsBuild badges.
+
 ## What's next
 
-1. **Phase 2 core work** (originally May 4–14, now active): extended SCHEMA v0.2 telemetry logger that reads from `snakeoil3.state` per tick; wire `scripts/run_race.py` to orchestrate both processes; 5-lap average baseline recorded
-2. **Then:** first labeled run archives → validator enforces schema → `telemetry/runs/` becomes a dataset we feed Granite for Phase 3 tuning
+1. **Phase 2 core work** (originally May 4–14, now active): extended SCHEMA v0.2 telemetry logger (`scripts/log_telemetry.py`) that reads from `snakeoil3.state` per tick; wire `scripts/run_race.py` to orchestrate both processes. 1-lap baseline stays canonical.
+2. **Then:** first labeled run archives → validator enforces schema → `telemetry/runs/` becomes a dataset we feed Granite for Phase 3 tuning.
+3. **Phase 4 pre-work (parallel):** verify the IBM F1 car in TORCS; sketch a livery concept in Paint/GIMP; start banking SkillsBuild badges.
 
 ---
 
