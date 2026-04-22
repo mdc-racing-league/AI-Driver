@@ -23,6 +23,7 @@ the path with `GYM_TORCS_DIR` env var if your layout differs.
 
 from __future__ import annotations
 
+import argparse
 import os
 import sys
 from pathlib import Path
@@ -31,6 +32,9 @@ DEFAULT_GYM_TORCS_DIR = os.environ.get(
     "GYM_TORCS_DIR", r"C:\torcs\gym_torcs"
 )
 sys.path.insert(0, DEFAULT_GYM_TORCS_DIR)
+
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_REPO_ROOT / "scripts"))
 
 try:
     import snakeoil3_gym as snakeoil
@@ -42,6 +46,8 @@ except ImportError as exc:
         file=sys.stderr,
     )
     sys.exit(1)
+
+from log_telemetry import TelemetryLogger
 
 
 TARGET_SPEED_KMH = 55.0
@@ -104,10 +110,58 @@ def first_scalar(value):
     return value
 
 
-def main() -> int:
+def _controller_reason(sensors: dict, action: dict) -> str:
+    if abs(float(sensors.get("trackPos", 0.0) or 0.0)) > 1.0:
+        return "off_track_recovery"
+    if float(action.get("brake", 0.0) or 0.0) > 0.0:
+        return "braking"
+    if float(action.get("accel", 0.0) or 0.0) >= 0.3:
+        return "accelerating"
+    return "coasting"
+
+
+def _parse_args(argv: list[str]) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="TORCS baseline driver (SCR/snakeoil3).")
+    parser.add_argument("--no-log", action="store_true",
+                        help="Disable per-tick telemetry archive under telemetry/runs/.")
+    parser.add_argument("--run-dir", default=None,
+                        help="Override run output directory (default: auto timestamp under telemetry/runs/).")
+    parser.add_argument("--notes", default="",
+                        help="Free-text note recorded in manifest.json.")
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = _parse_args(argv if argv is not None else sys.argv[1:])
+
     print(f"[driver_baseline] snakeoil3 path: {DEFAULT_GYM_TORCS_DIR}")
     print(f"[driver_baseline] target speed: {TARGET_SPEED_KMH} km/h")
     print("[driver_baseline] connecting to scr_server on 3001...")
+
+    logger: TelemetryLogger | None = None
+    if not args.no_log:
+        manifest_kwargs = dict(
+            track="corkscrew",
+            car="unknown",
+            driver="louis",
+            notes=args.notes,
+        )
+        if args.run_dir:
+            import uuid as _uuid
+            from log_telemetry import _git_sha
+            logger = TelemetryLogger(
+                Path(args.run_dir),
+                run_id=str(_uuid.uuid4()),
+                controller_type="baseline",
+                controller_variant_id=_git_sha(),
+                **manifest_kwargs,
+            )
+        else:
+            logger = TelemetryLogger.for_new_run(
+                controller_type="baseline",
+                **manifest_kwargs,
+            )
+        print(f"[driver_baseline] telemetry archive: {logger.run_dir}")
 
     client = snakeoil.Client(p=3001)
     client.MAX_STEPS = MAX_STEPS
@@ -118,6 +172,7 @@ def main() -> int:
     lap_splits: list[float] = []
     last_lap_seen = 0.0
     last_cur_lap = 0.0
+    current_lap_number = 1
     stop_reason = "maxSteps reached"
 
     try:
@@ -136,12 +191,14 @@ def main() -> int:
                 if not _is_duplicate(last_lap):
                     lap_splits.append(last_lap)
                     print(f"[driver_baseline] LAP {len(lap_splits)} complete (lastLapTime): {last_lap:.3f}s")
+                    current_lap_number = len(lap_splits) + 1
                 last_lap_seen = last_lap
 
             if last_cur_lap > 30.0 and cur_lap < 2.0 and cur_lap < last_cur_lap - 10.0:
                 if not _is_duplicate(last_cur_lap):
                     lap_splits.append(last_cur_lap)
                     print(f"[driver_baseline] LAP {len(lap_splits)} complete (curLapTime reset): {last_cur_lap:.3f}s")
+                    current_lap_number = len(lap_splits) + 1
 
             if cur_lap > 0.1:
                 race_started = True
@@ -164,6 +221,14 @@ def main() -> int:
             for k, v in action.items():
                 client.R.d[k] = v
             client.respond_to_server()
+
+            if logger is not None:
+                logger.log_frame(
+                    sensors=sensors,
+                    action=action,
+                    controller_reason=_controller_reason(sensors, action),
+                    lap_number=current_lap_number,
+                )
             if step % 200 == 0:
                 print(
                     f"[driver_baseline] step={step} "
@@ -179,6 +244,28 @@ def main() -> int:
             client.shutdown()
         except Exception:
             pass
+        if logger is not None:
+            best_lap = min(lap_splits) if lap_splits else None
+            total_time = sum(lap_splits) if lap_splits else None
+            final_damage = None
+            try:
+                final_damage = float(sensors.get("damage", 0.0) or 0.0)
+            except (NameError, TypeError, ValueError):
+                final_damage = None
+            outcome = {
+                "completed": bool(lap_splits),
+                "crashed": False,
+                "laps_completed": len(lap_splits),
+                "best_lap_seconds": best_lap,
+                "total_time_seconds": total_time,
+                "final_damage": final_damage,
+                "stop_reason": stop_reason,
+                "steps": step,
+            }
+            try:
+                logger.close(outcome=outcome)
+            except Exception as exc:
+                print(f"[driver_baseline] warning: telemetry close failed: {exc}", file=sys.stderr)
         print(f"[driver_baseline] finished after {step} steps — {stop_reason}")
         if lap_splits:
             best = min(lap_splits)
