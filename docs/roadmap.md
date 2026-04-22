@@ -71,7 +71,8 @@ The IBM bundle uses the **Simulated Car Racing (SCR) architecture**: TORCS ships
 - ✅ Implement `src/driver_baseline.py` as a `snakeoil3` subclass — completes a clean Corkscrew lap (2026-04-21 PM). Finishing **P1** with lap time **`3:32.92`**, damages **0**, top speed 65 km/h. `trackPos` stayed in `[-0.66, +0.66]` (never left the track). Canonical SCR steering `(angle - trackPos*0.5) / STEER_LOCK` + off-track recovery mode. Commits: `d9aeb4f`, `7091c72`, `379c7bb`. Evidence: `docs/screenshots/2026-04-21_phase2-day1-p1-finish.png`. Full run data: `telemetry/baseline.md`.
 - ⬜ Extended telemetry logger (SCHEMA v0.2 fields) — reads from `snakeoil3.state` dict per tick; replaces v0.1 in `scripts/log_telemetry.py`
 - ⬜ Wire `scripts/run_race.py` full impl — orchestrates both `wtorcs.exe` + Python client, handles the two-process startup
-- ⬜ Test harness: 5-lap average, same start conditions — `scripts/run_race.py --laps 5`
+- ❌ ~~Test harness: 5-lap average, same start conditions — `scripts/run_race.py --laps 5`~~ — **dropped 2026-04-22.** Competition judges a *single standing-start lap* (submission form field #6 verbatim: `"Standing start lap time - used to determine who qualifies"`). A 5-lap mean would tune the controller to rolling-start dynamics, not standing-start. 1-lap Quick Race stays the canonical regime. Cross-run determinism of 0.144 s (4 runs, Run 002 entry) means single-run A/B deltas are already trustworthy to ~0.1 s.
+- ⬜ **Verify IBM F1 car is what `scr_server` selects on race start** — submission form says `"Once your Corkscrew time trial is complete with the IBM F1 car"`. The Quick Start bundle *probably* configures this but we haven't confirmed. Action: inspect TORCS car-selection UI or `scr_server` robot config file; cross-reference with the IBM Box reference library.
 - ⬜ Every run archive must pass `scripts/validate_run.py` before commit
 - ✅ Record baseline lap time in `telemetry/baseline.md` — Run 001 (scoreboard) + Run 002 (driver log, 2026-04-22 AM) archived. Cross-run determinism verified: 4 runs, 0.144 s spread (0.068%). Commit `9e1d1c3`.
 - ✅ Fix `driver_baseline.py` race-end detection + per-lap logging — commits `7fcfab3`, `1d2b003`, `9e1d1c3`. Loop now exits at ~10,700 steps via stale-`curLapTime` detection (400 consecutive frozen ticks) instead of 99,999. Three-path lap capture: `lastLapTime` (primary) → `curLapTime` reset (fallback) → final-on-race-end (catches single-lap races where scr_server stops mid-lap). All three paths deduped against a 1-second tolerance.
@@ -88,11 +89,13 @@ The IBM bundle uses the **Simulated Car Racing (SCR) architecture**: TORCS ships
 
 ## Phase 4 — Polish & differentiate (June 5 – June 21) — *starts 3 days earlier, ends same date = +3-day buffer*
 
-- ⬜ Record fastest-lap video (uni + team name overlay for full duration)
-- ⬜ Record team video (intros, approach, IBM Granite + SkillsBuild usage)
+- ⬜ Record fastest-lap video (uni + team name overlay for full duration, **standing start, full-screen TORCS resolution** per form instruction)
+- ⬜ Record team video (max 3 min, talk to team/course/uni/developer strategy/IBM Granite/SkillsBuild badges)
 - ⬜ Blog draft in `blog/` (hits all 9 rubric points from mission brief)
 - ⬜ Publish blog (Medium or WordPress)
 - ⬜ Finalize top-level README with architecture diagram
+- ⬜ **Create bespoke F1 car livery** — submission form field #12 requires a custom livery with university (MDC) logo + team identifier, linked from Google Drive. Not in original scope; surfaced 2026-04-22 during form walkthrough.
+- ⬜ **SkillsBuild badges presentation slides** — submission form field #10 requires a slide deck (Google Slides preferred) showing images + links of completed IBM SkillsBuild badges. Track badge completion in `docs/skillsbuild-progress.md` and generate the deck near submission time.
 
 ## Phase 5 — Dry run & submit (June 22 – July 1)
 
@@ -117,6 +120,7 @@ Tracks how far ahead (+) or behind (−) the original plan we are. Update whenev
 | 2026-04-21 AM (Phase 2 Day 1 done early) | **+6 → +7 days** | Pre-work smoke test passed on first try: Python→UDP→TORCS round-trip verified, car driven around Corkscrew under snakeoil3 demo control. Phase 2 Day 1 goal achieved ~9 days ahead of original plan. Next: actually write `src/driver_baseline.py`. Evidence: `docs/screenshots/2026-04-21_phase1-smoke-test-success.png`. |
 | 2026-04-21 PM (`driver_baseline.py` shipped) | **+7 → +9 days** | First real custom driver completes a clean Corkscrew lap and finishes in **1st place** with lap time **`3:32.92`**, damages **0**. 3 iterations tonight: scalar-vs-list action fix, then canonical SCR steering formula + 55 km/h target + off-track recovery. `trackPos` stayed on-track the full race. Phase 2's main deliverable reached — next session is telemetry logger + run archive wiring, not driver correctness. Phase 3's target is now concrete: ≤ `3:00.98` (-15% vs baseline). Evidence: `docs/screenshots/2026-04-21_phase2-day1-p1-finish.png`. |
 | 2026-04-22 AM (Run 001 soft bugs closed) | **+9 days (held)** | Per-lap timing now captured from the driver log, not the scoreboard. Race-end detection keyed on stale `curLapTime` (not speed/lapTime zeros — scr_server sends the final frame frozen). Loop exits at ~10,700 steps, no more 99k ghost ticks. Run 002 clean: lap `3:32.81` from driver log matches scoreboard to 0.01 s. Cross-run determinism: 4 runs, 0.144 s spread — Phase 3 A/B comparisons can trust single-run deltas down to ~0.1 s. Commits: `7fcfab3`, `1d2b003`, `9e1d1c3`. Evidence: `docs/screenshots/2026-04-22_phase2-day1-run002-clean.png`. |
+| 2026-04-22 AM (submission format resolved) | **+9 days (held, small debit)** | Walked the live submission form at `https://forms.office.com/r/gD0gMZaTwP`. Field #6 verbatim: `"Standing start lap time - used to determine who qualifies"` — confirms competition is a **single standing-start lap** on Corkscrew with the **IBM F1 car**. Dropped 5-lap harness item (would have tuned to rolling-start dynamics, wrong regime). Added 3 previously-unscoped deliverables: (a) IBM F1 car verification in TORCS, (b) bespoke livery with uni + team ID, (c) SkillsBuild badges presentation deck. Net: minor scope addition (~3–4h), no schedule impact since 1-lap setup is what we already built. |
 | — | — | — |
 
 **Escalation rule:** if buffer drops below **+0 days** (on-schedule or behind) at any phase boundary, pause and replan. Do not compress by cutting scope without team discussion.
