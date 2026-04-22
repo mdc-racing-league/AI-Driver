@@ -7,10 +7,13 @@
 # TORCS must already be running in Window A with scr_server 1 / Corkscrew / 1 lap / New Race.
 #
 # Defined experiment IDs:
-#   016  — lookahead 200m / decel 7.0  (conservative: proves lookahead works)
-#   017  — lookahead 150m / decel 9.0  (moderate: tighter brake points)
-#   018  — lookahead 120m / decel 11.0 (aggressive: late braking)
-#   013r — reproduce Run 013 exactly   (regression check)
+#   016           — lookahead 200m / decel 7.0  (conservative: proves lookahead works)
+#   017           — lookahead 150m / decel 9.0  (moderate: tighter brake points)
+#   018           — lookahead 120m / decel 11.0 (aggressive: late braking)
+#   013r          — reproduce Run 013 exactly   (regression check)
+#   flat-out      — straights uncapped at 130 km/h, lookahead 150m/9.0
+#   push-straights— s08@110, s06/s10/s12@100, lookahead 150m/9.0
+#   regression    — Run-013 regression check (alias for 013r with suite naming)
 
 param(
     [Parameter(Mandatory=$true)]
@@ -40,9 +43,21 @@ switch ($ExperimentId) {
         $notes   = "Run 013 regression - s08@95 s09@58 start 2380"
         $driverArgs = "--target-speed 80 --segments $segments"
     }
+    "flat-out" {
+        $notes   = "flat-out - straights uncapped at 130 km/h, lookahead 150m/9.0"
+        $driverArgs = "--segments telemetry\segments_flat_out.yaml --lookahead 150 --lookahead-decel 9.0"
+    }
+    "push-straights" {
+        $notes   = "push-straights - s08@110 s06/s10/s12@100, lookahead 150m/9.0"
+        $driverArgs = "--segments telemetry\segments_push.yaml --lookahead 150 --lookahead-decel 9.0"
+    }
+    "regression" {
+        $notes   = "regression - Run-013 reproduction check (165.666s baseline)"
+        $driverArgs = "--segments $segments"
+    }
     default {
         Write-Error "Unknown experiment ID: $ExperimentId"
-        Write-Host "Valid IDs: 016, 017, 018, 013r"
+        Write-Host "Valid IDs: 016, 017, 018, 013r, flat-out, push-straights, regression"
         exit 1
     }
 }

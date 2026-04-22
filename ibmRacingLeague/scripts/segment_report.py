@@ -69,12 +69,25 @@ def segment_stats(frames: list[dict], start_m: float, end_m: float) -> dict:
     steer = [abs(f["steer"]) for f in inside if f.get("steer") is not None]
     t0 = inside[0]["time"]
     t1 = inside[-1]["time"]
+
+    # Entry speed: first frame within [start_m, start_m + 20m]
+    entry_window = [f for f in inside if f["trackDistance"] < start_m + 20.0]
+    entry_speeds = [f["speed"] for f in entry_window if f.get("speed") is not None]
+    entry_kmh = round(entry_speeds[0], 1) if entry_speeds else None
+
+    # Exit speed: last frame within [end_m - 20m, end_m]
+    exit_window = [f for f in inside if f["trackDistance"] >= end_m - 20.0]
+    exit_speeds = [f["speed"] for f in exit_window if f.get("speed") is not None]
+    exit_kmh = round(exit_speeds[-1], 1) if exit_speeds else None
+
     return {
         "frames": len(inside),
         "elapsed_s": round(t1 - t0, 3),
         "v_min": round(min(speeds), 1) if speeds else None,
         "v_mean": round(sum(speeds) / len(speeds), 1) if speeds else None,
         "v_max": round(max(speeds), 1) if speeds else None,
+        "entry_kmh": entry_kmh,
+        "exit_kmh": exit_kmh,
         "peak_abs_trackPos": round(max(tpos), 3) if tpos else None,
         "peak_abs_steer": round(max(steer), 3) if steer else None,
     }
@@ -132,8 +145,8 @@ def format_report(run_dir: Path, segments: list[dict], rows: list[dict]) -> str:
         "Per-segment performance aggregates for lap 1 of this run, bucketed by "
         "`trackDistance` into the segments defined in `telemetry/segments.yaml`.",
         "",
-        "| # | id | kind | range (m) | target v (km/h) | t (s) | v min/avg/max | peak \\|trackPos\\| | peak \\|steer\\| | frames |",
-        "|---|---|---|---|---|---|---|---|---|---|",
+        "| # | id | kind | range (m) | target v (km/h) | t (s) | v min/avg/max | entry_kmh | exit_kmh | peak \\|trackPos\\| | peak \\|steer\\| | frames |",
+        "|---|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     total_t = 0.0
     for i, (seg, stat) in enumerate(zip(segments, rows)):
@@ -142,14 +155,17 @@ def format_report(run_dir: Path, segments: list[dict], rows: list[dict]) -> str:
         if stat.get("frames", 0) == 0:
             lines.append(
                 f"| {i} | {seg.get('id','?')} | {seg.get('kind','?')} | {rng} | "
-                f"{target} | — | — | — | — | 0 |"
+                f"{target} | — | — | n/a | n/a | — | — | 0 |"
             )
             continue
         total_t += stat["elapsed_s"]
         v_fmt = f"{stat['v_min']}/{stat['v_mean']}/{stat['v_max']}"
+        entry_fmt = str(stat["entry_kmh"]) if stat.get("entry_kmh") is not None else "n/a"
+        exit_fmt = str(stat["exit_kmh"]) if stat.get("exit_kmh") is not None else "n/a"
         lines.append(
             f"| {i} | {seg.get('id','?')} | {seg.get('kind','?')} | {rng} | "
             f"{target} | {stat['elapsed_s']} | {v_fmt} | "
+            f"{entry_fmt} | {exit_fmt} | "
             f"{stat['peak_abs_trackPos']} | {stat['peak_abs_steer']} | {stat['frames']} |"
         )
     lines += [
@@ -160,6 +176,43 @@ def format_report(run_dir: Path, segments: list[dict], rows: list[dict]) -> str:
         "very last tick of each segment is dropped)._",
         "",
     ]
+
+    # --- Corner Entry/Exit Analysis ---
+    corner_rows = [
+        (seg, stat)
+        for seg, stat in zip(segments, rows)
+        if seg.get("kind") == "corner" and stat.get("frames", 0) > 0
+    ]
+    if corner_rows:
+        lines += [
+            "## Corner Entry/Exit Analysis",
+            "",
+            "```",
+            f"{'Segment':<24} | {'Entry km/h':>10} | {'Target km/h':>11} | {'Exit km/h':>9} | Margin",
+            "-" * 80,
+        ]
+        for seg, stat in corner_rows:
+            seg_id = seg.get("id", "?")
+            target = seg.get("target_speed_kmh")
+            entry = stat.get("entry_kmh")
+            exit_ = stat.get("exit_kmh")
+            entry_str = f"{entry:>10.1f}" if entry is not None else f"{'n/a':>10}"
+            target_str = f"{target:>11.1f}" if target is not None else f"{'n/a':>11}"
+            exit_str = f"{exit_:>9.1f}" if exit_ is not None else f"{'n/a':>9}"
+            if entry is not None and target is not None:
+                if entry > target + 20:
+                    margin = "⚠️  HOT ENTRY"
+                elif entry > target:
+                    margin = "OK"
+                else:
+                    margin = "✅ COOL"
+            else:
+                margin = "n/a"
+            lines.append(
+                f"{seg_id:<24} | {entry_str} | {target_str} | {exit_str} | {margin}"
+            )
+        lines += ["```", ""]
+
     return "\n".join(lines)
 
 
