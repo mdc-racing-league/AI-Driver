@@ -138,6 +138,37 @@ Fix: commit `487c6de` adds a `race_finalized` flag set from both lap-detection p
 - **Path A — slow-zone the hairpin.** Identify segment around lap-time 154 s, hardcode target to ~50 km/h across that window, keep 80 elsewhere. Hypothesis: damage → 0, lap time → mid-160s.
 - **Path B — push to 100 km/h.** Find the failure wall. If stable: faster again. If full crash: PD steering becomes the next-priority deliverable.
 
+### Run 008 — Path A infrastructure (driver_baseline.py, `--slow-zone`)
+
+Chose Path A. Shipped two pieces:
+
+1. **`src/driver_baseline.py` — `--slow-zone START:END:SPEED` CLI flag (repeatable).** Keyed on the `distFromStart` sensor (falls back to `distRaced`). Inside a zone the controller targets the zone's speed instead of `--target-speed`. First-match-wins. Zero effect when no zones are passed (default behavior preserved).
+2. **`scripts/find_offtracks.py`** — scans a run archive's `frames.ndjson` and prints the `trackDistance` range + peak `trackPos` for every contiguous excursion above a threshold. Output includes a ready-to-paste `--slow-zone START:END:<speed>` suggestion (padded ±100 m by default).
+
+**Corner candidates from Run 006 (clean 55 km/h, threshold = 0.5):**
+
+| # | trackDistance | Peak trackPos | Suggested zone |
+|---|---|---|---|
+| 1 | 2461–2479 m | −0.70 | `2361:2579:<speed>` |
+| 2 | 2495–2513 m | +0.68 | `2395:2613:<speed>` |
+| 3 | 3265–3292 m | −0.67 | `3165:3392:<speed>` |
+
+These are the 3 corners where 55 km/h is already near the stability edge. Zone #3 is the prime suspect for Run 007's −3.77 spin (same left-side signature, same lap phase).
+
+**Run 008 plan (when Run 007 archive lands on Zo for verification):**
+```
+python src/driver_baseline.py \
+  --target-speed 80 \
+  --slow-zone 3165:3392:50 \
+  --slow-zone 2361:2613:50 \
+  --notes "Run 008 Path A - slow zones on tight corners"
+```
+Success criterion: **damages → 0, lap time ≤ 170.566 s.** Failure modes: still spinning (zone boundaries wrong — iterate), or lap time much worse (zones too slow/wide — shrink).
+
+**Unit test coverage (`src/driver_baseline.py`):**
+- `target_speed_for()` returns default when no zone matches, zone speed when inside, respects first-match-wins, falls back to `distRaced` if `distFromStart` missing.
+- `_parse_slow_zones()` parses `START:END:SPEED`, raises `ValueError` on malformed specs, raises when end ≤ start.
+
 ### Target for Phase 3 tuning
 
 Mission brief requires a **-15% improvement vs. baseline** before Phase 4. That means Phase 3 must deliver **≤ 3:00.98** on Corkscrew (≤ 180.98 s). Current headroom: raise target speed, segment-aware braking/throttle, possibly a PID on heading instead of pure P.

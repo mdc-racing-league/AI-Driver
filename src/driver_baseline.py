@@ -59,6 +59,19 @@ GEAR_DOWN_RPM = 3000
 MAX_STEPS = 20000
 STALE_LAP_LIMIT = 400
 
+# List of (start_m, end_m, speed_kmh). If the car's trackDistance falls inside
+# a window, the controller uses that speed instead of TARGET_SPEED_KMH.
+# Populated from --slow-zone CLI flags. First match wins.
+SLOW_ZONES: list[tuple[float, float, float]] = []
+
+
+def target_speed_for(state: dict) -> float:
+    dist = float(state.get("distFromStart", state.get("distRaced", 0.0)) or 0.0)
+    for start, end, speed in SLOW_ZONES:
+        if start <= dist <= end:
+            return speed
+    return TARGET_SPEED_KMH
+
 
 def pick_gear(state: dict) -> int:
     gear = int(state.get("gear", 1)) or 1
@@ -81,10 +94,11 @@ def drive(state: dict) -> dict:
         steer = (angle - track_pos * TRACK_POS_BIAS) / STEER_LOCK
     steer = max(-1.0, min(1.0, steer))
 
-    if speed_x < TARGET_SPEED_KMH:
+    target = target_speed_for(state)
+    if speed_x < target:
         accel = 0.3
         brake = 0.0
-    elif speed_x > TARGET_SPEED_KMH + 10:
+    elif speed_x > target + 10:
         accel = 0.0
         brake = 0.05
     else:
@@ -130,7 +144,24 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
                         help="Free-text note recorded in manifest.json.")
     parser.add_argument("--target-speed", type=float, default=TARGET_SPEED_KMH,
                         help=f"Controller target speed in km/h (default: {TARGET_SPEED_KMH}).")
+    parser.add_argument("--slow-zone", action="append", default=[],
+                        metavar="START:END:SPEED",
+                        help="Per-segment slow zone keyed on trackDistance, e.g. "
+                             "'2400:2800:40'. Repeat for multiple zones.")
     return parser.parse_args(argv)
+
+
+def _parse_slow_zones(raw: list[str]) -> list[tuple[float, float, float]]:
+    zones = []
+    for spec in raw:
+        parts = spec.split(":")
+        if len(parts) != 3:
+            raise ValueError(f"--slow-zone expects START:END:SPEED, got {spec!r}")
+        start, end, speed = (float(p) for p in parts)
+        if end <= start:
+            raise ValueError(f"--slow-zone {spec!r}: end ({end}) must be > start ({start})")
+        zones.append((start, end, speed))
+    return zones
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -138,11 +169,14 @@ def main(argv: list[str] | None = None) -> int:
 
     # drive() reads TARGET_SPEED_KMH at module scope, so override here when
     # --target-speed is passed. Keeps the experiment-sweep workflow one-line.
-    global TARGET_SPEED_KMH
+    global TARGET_SPEED_KMH, SLOW_ZONES
     TARGET_SPEED_KMH = args.target_speed
+    SLOW_ZONES = _parse_slow_zones(args.slow_zone)
 
     print(f"[driver_baseline] snakeoil3 path: {DEFAULT_GYM_TORCS_DIR}")
     print(f"[driver_baseline] target speed: {TARGET_SPEED_KMH} km/h")
+    for start, end, speed in SLOW_ZONES:
+        print(f"[driver_baseline] slow zone: {start:.0f}-{end:.0f}m @ {speed} km/h")
     print("[driver_baseline] connecting to scr_server on 3001...")
 
     logger: TelemetryLogger | None = None
