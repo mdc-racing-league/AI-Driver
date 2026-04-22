@@ -129,14 +129,19 @@ def main() -> int:
             last_lap = float(sensors.get("lastLapTime", 0.0) or 0.0)
             speed_x = float(sensors.get("speedX", 0.0) or 0.0)
 
+            def _is_duplicate(candidate: float) -> bool:
+                return bool(lap_splits) and abs(lap_splits[-1] - candidate) < 1.0
+
             if last_lap > 0 and abs(last_lap - last_lap_seen) > 1e-3:
-                lap_splits.append(last_lap)
-                print(f"[driver_baseline] LAP {len(lap_splits)} complete (lastLapTime): {last_lap:.3f}s")
+                if not _is_duplicate(last_lap):
+                    lap_splits.append(last_lap)
+                    print(f"[driver_baseline] LAP {len(lap_splits)} complete (lastLapTime): {last_lap:.3f}s")
                 last_lap_seen = last_lap
 
             if last_cur_lap > 30.0 and cur_lap < 2.0 and cur_lap < last_cur_lap - 10.0:
-                lap_splits.append(last_cur_lap)
-                print(f"[driver_baseline] LAP {len(lap_splits)} complete (curLapTime reset): {last_cur_lap:.3f}s")
+                if not _is_duplicate(last_cur_lap):
+                    lap_splits.append(last_cur_lap)
+                    print(f"[driver_baseline] LAP {len(lap_splits)} complete (curLapTime reset): {last_cur_lap:.3f}s")
 
             if cur_lap > 0.1:
                 race_started = True
@@ -145,7 +150,7 @@ def main() -> int:
                 if abs(cur_lap - last_cur_lap) < 1e-4:
                     stale_lap_ticks += 1
                     if stale_lap_ticks >= STALE_LAP_LIMIT:
-                        if not lap_splits or abs(lap_splits[-1] - cur_lap) > 0.5:
+                        if cur_lap > 10.0 and not _is_duplicate(cur_lap):
                             lap_splits.append(cur_lap)
                             print(f"[driver_baseline] LAP {len(lap_splits)} complete (final, on race-end): {cur_lap:.3f}s")
                         stop_reason = f"race ended (curLapTime frozen at {cur_lap:.2f}s for {stale_lap_ticks} ticks)"
