@@ -127,7 +127,7 @@ segments:
   - id: s08_straight
     kind: straight
     start_m: 1600.0
-    end_m: 2430.0
+    end_m: 2500.0
     target_speed_kmh: 80.0
     observed:
       len_m: 830.0
@@ -137,11 +137,15 @@ segments:
       angle_peak_abs: 0.133
       steer_peak_abs: 0.294
       steer_mean_signed: 0.012
+    notes: >
+      Run 011: extended forward from 2430 to 2500 so car stays at 80 km/h
+      until the actual hairpin entry (Run 009 used slow-zone 2420:2540 and
+      hit the apex cleanly; derive_segments widened s09 too early).
 
   - id: s09_turn_R_2605m
     kind: corner
-    start_m: 2430.0
-    end_m: 2780.0
+    start_m: 2500.0
+    end_m: 2650.0
     target_speed_kmh: 50.0
     observed:
       len_m: 350.0
@@ -151,10 +155,15 @@ segments:
       angle_peak_abs: 0.433
       steer_peak_abs: 0.657
       steer_mean_signed: 0.042
+    notes: >
+      Run 011: narrowed from 2430:2780 (350m) to 2500:2650 (150m) to match
+      Run 009's proven slow-zone (2420:2540, 120m). Run 010 spent ~16s at
+      ~60 km/h here which cost +5.2s vs Run 009. Narrower window should
+      recover most of that.
 
   - id: s10_straight
     kind: straight
-    start_m: 2780.0
+    start_m: 2650.0
     end_m: 2945.0
     target_speed_kmh: 80.0
     observed:

@@ -148,17 +148,65 @@ in `segments.yaml` (gain ~0.4 s), and consider raising s03 from 75 → 80
 
 ---
 
+## Run 010 — result (regression: s09 hairpin too wide)
+
+`--target-speed 80 --segments telemetry/segments.yaml`
+→ **175.266 s clean, damages 0, top 86 km/h, no excursions** (|trackPos|
+peak 0.78). `--segments` infrastructure works end-to-end — it subsumes
+`--slow-zone` functionally — but the auto-derived map was too
+conservative at the right-hand hairpin.
+
+**Root cause:** `s09_turn_R_2605m` was derived as `2430:2780 m` (350 m
+wide) at 50 km/h. Run 009's hand-placed slow-zone covered only `2420:2540
+m` (120 m). That extra ~230 m held at ~60 km/h instead of ~80 km/h costs
+~+6.2 s, almost exactly matching the measured +5.2 s regression vs
+Run 009.
+
+**Why the derivation over-covered s09:** `derive_segments.py` uses
+`corner_steer_abs=0.08`, which stays triggered through the hairpin's
+entry ramp-in and exit ramp-out, not just the apex. Fine for most
+segments (s13 came out 55 m — correct), but the long sweep into Hairpin
+A tripped the detector early.
+
+**Fix for Run 011:** narrowed `s09` to `2500:2650 m` (150 m) by hand,
+extended `s08` forward to 2500 and `s10` backward to 2650 so the car
+holds 80 km/h until the real apex entry. s13 left alone (already
+correct at 55 m). s05/s07/s11 stay at 78 km/h until Run 011 measures
+the new baseline — no point tuning two knobs at once.
+
+---
+
+## Run 011 — plan (s09 narrowed)
+
+`--target-speed 80 --segments telemetry/segments.yaml` (same command;
+only the YAML changed)
+
+**Hypothesis:** narrowing s09 from 350 m → 150 m recovers most of the
++5.2 s regression. Prediction: **~170.5 s** (within 0.5 s of Run 009,
+ideally slightly under because the driver enters s10 at 80 km/h sooner).
+
+**Abort criteria:**
+- Damages > 0 or `|trackPos| > 1.0` → s09 window was too tight; widen back.
+- Lap > 172 s → unexpected; inspect segment report.
+
+**If Run 011 passes cleanly, Run 012:** promote s05/s07/s11 from 78 → 80
+km/h (gain ~0.4 s, all three have peak |trackPos| ≤ 0.27 in Run 009 —
+massive safety margin).
+
+---
+
 ## Tracked deltas
 
 Running tally vs Run 006 (the 55 km/h clean baseline):
 
-| Run | Lap (s) | Δ vs Run 006 | Δ vs Run 008 | Status |
+| Run | Lap (s) | Δ vs Run 006 | Δ vs Run 009 | Status |
 |---|---|---|---|---|
-| 006 | 212.986 | — | +37.880 | Clean baseline |
-| 007 | 170.566 | −42.420 (−19.9%) | −4.540 | Unsafe — 41 dmg |
-| 008 | 175.106 | −37.880 (−17.8%) | — | Clean reference (superseded) |
-| 009 | 170.044 | −42.942 (−20.2%) | −5.062 | **Clean reference** |
-| 010 | *target ~170.8* | *target ~−42.2* | *target ~−4.3* | Pending — first `--segments` run |
+| 006 | 212.986 | — | +42.942 | Clean baseline |
+| 007 | 170.566 | −42.420 (−19.9%) | +0.522 | Unsafe — 41 dmg |
+| 008 | 175.106 | −37.880 (−17.8%) | +5.062 | Clean reference (superseded) |
+| 009 | 170.044 | −42.942 (−20.2%) | — | **Clean reference** |
+| 010 | 175.266 | −37.720 (−17.7%) | +5.222 | Clean but regressed — s09 too wide |
+| 011 | *target ~170.5* | *target ~−42.5* | *target ~−0.5* | Pending — s09 narrowed to 150 m |
 
-Phase 3 rubric gate: `≤ 180.98 s` (−15%) — cleared in Runs 007/008/009.
+Phase 3 rubric gate: `≤ 180.98 s` (−15%) — cleared in Runs 007/008/009/010.
 Stretch target: `≤ 150 s` (`2:30`) clean — ~20 s below current reference.
