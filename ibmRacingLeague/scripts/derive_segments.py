@@ -245,7 +245,7 @@ def main():
     runs = merge_short(runs)
     print(f"{len(runs)} merged segments", file=sys.stderr)
 
-    args.out.write_text(build_yaml(runs, bins, args.source_run))
+    args.out.write_text(build_yaml(runs, bins, args.source_run), encoding="utf-8")
     print(f"wrote {args.out}", file=sys.stderr)
 
     for k, s, e in runs:

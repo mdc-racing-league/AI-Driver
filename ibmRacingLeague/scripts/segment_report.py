@@ -189,7 +189,7 @@ def main():
     rows = [segment_stats(frames, s["start_m"], s["end_m"]) for s in segments]
     report = format_report(args.run_dir, segments, rows)
     out_path = args.out or (args.run_dir / "segment_report.md")
-    out_path.write_text(report)
+    out_path.write_text(report, encoding="utf-8")
     print(report)
     print(f"wrote {out_path}", file=sys.stderr)
 
