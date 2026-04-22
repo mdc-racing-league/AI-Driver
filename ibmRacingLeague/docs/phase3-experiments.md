@@ -195,6 +195,56 @@ massive safety margin).
 
 ---
 
+## Run 011 — result (crashed — s09 window pushed wrong direction)
+
+`--target-speed 80 --segments telemetry/segments.yaml` with s09 at
+2500:2650 → **183.826 s, damages 95, off-track peak |trackPos| 3.52,
+speed min −68.3 km/h** (car going backwards during recovery). P1 only
+because no opponents.
+
+**What went wrong:** Run 009's proven slow-zone was `2420:2540`. For
+Run 011 I pushed the start FORWARD to 2500 instead of BACK to 2420.
+Result: only ~80 m of coast-down distance before the apex at ~2580.
+Car entered the hairpin at ~70 km/h into a 50 km/h corner, slid off
+the outside at step 5600, spun across the track to peak trackPos
++3.52, recovered at step 6400 having lost ~10 s to the crash.
+
+**Lesson (mechanical):** the slow-zone START needs to be upstream of
+the apex by the full brake-to-target distance. On this car at P‑only
+control (no active brake), coast-down from 80→50 km/h takes ~100–120 m
+— so the slow-zone must begin ≥120 m before the apex. Run 009's 2420
+start was 185 m before the apex at ~2605. Run 011's 2500 start was
+only 105 m — too tight without active braking.
+
+**Lesson (process):** when "fixing" a regression, first re-read the
+reference config that worked. Run 009's 2420:2540 was already the
+answer; I just had to adopt its boundaries wholesale instead of
+inventing new ones.
+
+---
+
+## Run 012 — plan (match Run 009 exactly)
+
+`segments.yaml` s09 now set to `2420:2540` at 50 km/h — identical to
+Run 009's `--slow-zone 2420:2540:50`. s13 unchanged at 3245:3300.
+s08 ends at 2420, s10 starts at 2540.
+
+**Hypothesis:** Run 012 reproduces Run 009's lap time within ±0.5 s
+(target: **~170 s clean, damages 0, zero excursions**). If it does,
+the `--segments` infrastructure is validated as functionally
+equivalent to hand-placed `--slow-zone` flags — at which point we can
+move to pushing s06/s08 target speeds (the real speed levers, worth
+10+ s combined) or promoting s05/s07/s11 from 78 → 80 km/h (safe, ~0.4 s).
+
+**Abort criteria:**
+- Damages > 0 or `|trackPos| > 1.0` → something else changed; diff s10/s11 targets against Run 009.
+- Lap > 172 s → investigate.
+
+**If Run 012 passes cleanly, Run 013:** promote s05/s07/s11 → 80 km/h
+in YAML (one-line change, ~0.4 s gain, ample margin).
+
+---
+
 ## Tracked deltas
 
 Running tally vs Run 006 (the 55 km/h clean baseline):
@@ -206,7 +256,8 @@ Running tally vs Run 006 (the 55 km/h clean baseline):
 | 008 | 175.106 | −37.880 (−17.8%) | +5.062 | Clean reference (superseded) |
 | 009 | 170.044 | −42.942 (−20.2%) | — | **Clean reference** |
 | 010 | 175.266 | −37.720 (−17.7%) | +5.222 | Clean but regressed — s09 too wide |
-| 011 | *target ~170.5* | *target ~−42.5* | *target ~−0.5* | Pending — s09 narrowed to 150 m |
+| 011 | 183.826 | −29.160 (−13.7%) | +13.782 | **Crashed** — 95 dmg, s09 start pushed wrong direction |
+| 012 | *target ~170* | *target ~−43* | *target ~0* | Pending — s09 reset to Run 009's 2420:2540 |
 
 Phase 3 rubric gate: `≤ 180.98 s` (−15%) — cleared in Runs 007/008/009/010.
 Stretch target: `≤ 150 s` (`2:30`) clean — ~20 s below current reference.
