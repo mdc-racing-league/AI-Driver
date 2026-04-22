@@ -128,11 +128,18 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
                         help="Override run output directory (default: auto timestamp under telemetry/runs/).")
     parser.add_argument("--notes", default="",
                         help="Free-text note recorded in manifest.json.")
+    parser.add_argument("--target-speed", type=float, default=TARGET_SPEED_KMH,
+                        help=f"Controller target speed in km/h (default: {TARGET_SPEED_KMH}).")
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv if argv is not None else sys.argv[1:])
+
+    # drive() reads TARGET_SPEED_KMH at module scope, so override here when
+    # --target-speed is passed. Keeps the experiment-sweep workflow one-line.
+    global TARGET_SPEED_KMH
+    TARGET_SPEED_KMH = args.target_speed
 
     print(f"[driver_baseline] snakeoil3 path: {DEFAULT_GYM_TORCS_DIR}")
     print(f"[driver_baseline] target speed: {TARGET_SPEED_KMH} km/h")
