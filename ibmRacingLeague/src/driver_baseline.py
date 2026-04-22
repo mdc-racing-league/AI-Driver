@@ -69,6 +69,12 @@ SLOW_ZONES: list[tuple[float, float, float]] = []
 # Takes precedence over SLOW_ZONES when set.
 SEGMENTS: list[tuple[float, float, float]] = []
 
+# Lookahead brake controller parameters.
+# Populated from --lookahead and --lookahead-decel CLI flags.
+LOOKAHEAD_M: float = 0.0          # 0 = disabled
+LOOKAHEAD_DECEL_MS2: float = 8.0  # assumed deceleration in m/s²
+KMH_TO_MS: float = 1000.0 / 3600.0
+
 
 def target_speed_for(state: dict) -> float:
     dist = float(state.get("distFromStart", state.get("distRaced", 0.0)) or 0.0)
@@ -131,6 +137,88 @@ def drive(state: dict) -> dict:
     }
 
 
+def _lookahead_brake(dist_m: float, speed_kmh: float) -> float:
+    """Return brake pedal [0,1] required to hit the next slow segment's target.
+
+    Scans SEGMENTS within LOOKAHEAD_M ahead.  For each upcoming segment whose
+    target is lower than current speed, computes the minimum braking distance
+    at LOOKAHEAD_DECEL_MS2 and returns a proportional pedal value if we are
+    already inside (or have entered) that brake zone.  0.0 = no brake needed.
+    """
+    if not SEGMENTS or LOOKAHEAD_M <= 0:
+        return 0.0
+
+    speed_ms = speed_kmh * KMH_TO_MS
+    max_brake = 0.0
+
+    for seg_start, seg_end, seg_target in SEGMENTS:
+        dist_to_seg = seg_start - dist_m
+        if dist_to_seg < -50.0:
+            continue  # well past the start of this segment
+        if dist_to_seg > LOOKAHEAD_M:
+            break  # segments are sorted by start_m — nothing further in window
+
+        target_ms = seg_target * KMH_TO_MS
+        if target_ms >= speed_ms - 1.0:
+            continue  # no braking needed to hit this target
+
+        req_dist = (speed_ms ** 2 - target_ms ** 2) / (2.0 * LOOKAHEAD_DECEL_MS2)
+        effective_dist = max(0.0, dist_to_seg)
+
+        if effective_dist <= req_dist:
+            # Inside the brake zone.  Scale 0.3→0.9 based on how deep we are.
+            overshoot_ratio = max(0.0, (req_dist - effective_dist) / max(req_dist, 1.0))
+            b = min(0.9, 0.3 + overshoot_ratio * 0.6)
+            max_brake = max(max_brake, b)
+
+    return max_brake
+
+
+def drive_lookahead(state: dict) -> dict:
+    """Full-throttle lookahead brake controller.
+
+    Runs flat-out on every straight; brakes only when physics demands it to
+    reach the next slow segment's target speed before the apex.  Replaces the
+    per-segment speed cap with a physics-derived brake trigger.
+    """
+    angle = float(state.get("angle", 0.0))
+    track_pos = float(state.get("trackPos", 0.0))
+    speed_x = float(state.get("speedX", 0.0))
+    dist = float(state.get("distFromStart", state.get("distRaced", 0.0)) or 0.0)
+
+    if abs(track_pos) > 1.0:
+        steer = -OFFTRACK_RECOVERY_STEER if track_pos > 0 else OFFTRACK_RECOVERY_STEER
+    else:
+        steer = (angle - track_pos * TRACK_POS_BIAS) / STEER_LOCK
+    steer = max(-1.0, min(1.0, steer))
+
+    brake = _lookahead_brake(dist, speed_x)
+
+    if brake > 0.0:
+        accel = 0.0
+    else:
+        # Safety net: if we're inside a slow segment and still overshooting,
+        # apply a gentle corrective brake (lookahead decel underestimate).
+        current_target = target_speed_for(state)
+        if speed_x > current_target + 5.0:
+            brake = min(0.5, (speed_x - current_target) * 0.04)
+            accel = 0.0
+        else:
+            accel = 1.0  # full throttle on every straight
+
+    gear = pick_gear(state)
+
+    return {
+        "steer": steer,
+        "accel": accel,
+        "brake": brake,
+        "gear": gear,
+        "clutch": 0.0,
+        "focus": [-90, -45, 0, 45, 90],
+        "meta": 0,
+    }
+
+
 def first_scalar(value):
     if isinstance(value, (list, tuple)) and value:
         return value[0]
@@ -141,9 +229,9 @@ def _controller_reason(sensors: dict, action: dict) -> str:
     if abs(float(sensors.get("trackPos", 0.0) or 0.0)) > 1.0:
         return "off_track_recovery"
     if float(action.get("brake", 0.0) or 0.0) > 0.0:
-        return "braking"
+        return "lookahead_braking" if LOOKAHEAD_M > 0 else "braking"
     if float(action.get("accel", 0.0) or 0.0) >= 0.3:
-        return "accelerating"
+        return "full_throttle" if LOOKAHEAD_M > 0 else "accelerating"
     return "coasting"
 
 
@@ -166,6 +254,17 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
                         help="Path to a segments.yaml produced by scripts/derive_segments.py. "
                              "Each segment contributes a (start_m, end_m, target_speed_kmh) "
                              "window to the speed lookup; takes precedence over --slow-zone.")
+    parser.add_argument("--lookahead", type=float, default=0.0,
+                        metavar="METERS",
+                        help="Enable lookahead brake controller.  Scans this many metres ahead "
+                             "for slow segments and brakes only when physics demands it.  "
+                             "Full throttle everywhere else.  Requires --segments.  "
+                             "Typical values: 120–200.  0 = disabled (default).")
+    parser.add_argument("--lookahead-decel", type=float, default=8.0,
+                        metavar="M_PER_S2",
+                        help="Assumed deceleration in m/s² used to compute brake-point distance "
+                             "(default: 8.0).  Increase if the car overshoots corners; "
+                             "decrease if braking starts too early.")
     return parser.parse_args(argv)
 
 
@@ -237,13 +336,18 @@ def main(argv: list[str] | None = None) -> int:
 
     # drive() reads TARGET_SPEED_KMH at module scope, so override here when
     # --target-speed is passed. Keeps the experiment-sweep workflow one-line.
-    global TARGET_SPEED_KMH, SLOW_ZONES, SEGMENTS
+    global TARGET_SPEED_KMH, SLOW_ZONES, SEGMENTS, LOOKAHEAD_M, LOOKAHEAD_DECEL_MS2
     TARGET_SPEED_KMH = args.target_speed
     SLOW_ZONES = _parse_slow_zones(args.slow_zone)
     SEGMENTS = _load_segments(args.segments) if args.segments else []
+    LOOKAHEAD_M = args.lookahead
+    LOOKAHEAD_DECEL_MS2 = args.lookahead_decel
 
     print(f"[driver_baseline] snakeoil3 path: {DEFAULT_GYM_TORCS_DIR}")
-    print(f"[driver_baseline] target speed: {TARGET_SPEED_KMH} km/h")
+    if LOOKAHEAD_M > 0:
+        print(f"[driver_baseline] controller: LOOKAHEAD (window={LOOKAHEAD_M:.0f}m, decel={LOOKAHEAD_DECEL_MS2:.1f} m/s²)")
+    else:
+        print(f"[driver_baseline] controller: baseline (target speed: {TARGET_SPEED_KMH} km/h)")
     if SEGMENTS:
         print(f"[driver_baseline] segments: {len(SEGMENTS)} from {args.segments}")
     for start, end, speed in SLOW_ZONES:
@@ -336,7 +440,7 @@ def main(argv: list[str] | None = None) -> int:
 
             last_cur_lap = cur_lap
 
-            action = drive(sensors)
+            action = drive_lookahead(sensors) if LOOKAHEAD_M > 0 else drive(sensors)
             for k, v in action.items():
                 client.R.d[k] = v
             client.respond_to_server()

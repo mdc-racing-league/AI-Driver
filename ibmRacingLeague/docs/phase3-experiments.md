@@ -257,7 +257,73 @@ Running tally vs Run 006 (the 55 km/h clean baseline):
 | 009 | 170.044 | −42.942 (−20.2%) | — | **Clean reference** |
 | 010 | 175.266 | −37.720 (−17.7%) | +5.222 | Clean but regressed — s09 too wide |
 | 011 | 183.826 | −29.160 (−13.7%) | +13.782 | **Crashed** — 95 dmg, s09 start pushed wrong direction |
-| 012 | *target ~170* | *target ~−43* | *target ~0* | Pending — s09 reset to Run 009's 2420:2540 |
+| 012 | 170.362 | −42.624 (−20.0%) | +0.318 | Clean — segment infra validated |
+| 013 | **165.666** | **−47.320 (−22.2%)** | **−4.378** | **Personal best** — s08@95, s09 start 2380 |
+| 014 | 173.156 | −39.830 (−18.7%) | +3.112 | Regressed — proportional brake killed overshoot |
+| 015 | 169.126 | −43.860 (−20.6%) | −0.918 | Regressed vs 013 — brake deadband starved straights |
 
-Phase 3 rubric gate: `≤ 180.98 s` (−15%) — cleared in Runs 007/008/009/010.
-Stretch target: `≤ 150 s` (`2:30`) clean — ~20 s below current reference.
+Phase 3 rubric gate: `≤ 180.98 s` (−15%) — cleared in Runs 007–015.
+**Current submission candidate: Run 013, 165.666 s (2:45.67), 0 damages.**
+Stretch target: `≤ 150 s` (`2:30`) clean — requires ~16 s vs Run 013.
+
+---
+
+## Lookahead brake controller — Runs 016–018
+
+**Architecture change:** replaces per-segment speed cap with a physics-derived brake trigger.
+Instead of "target = 80 km/h, coast above", the controller runs **full throttle everywhere** and
+only brakes when the stopping distance to the next corner's target speed has been reached.
+
+**Implementation:** `src/driver_baseline.py --lookahead <METERS> --lookahead-decel <M_PER_S2> --segments telemetry/segments.yaml`
+
+Key physics: brake distance from v to v_target = (v² − v_t²) / (2 × decel).
+- 130 km/h → 58 km/h @ 8 m/s²: **64 m**
+- 130 km/h → 58 km/h @ 10 m/s²: **51 m**
+- 140 km/h → 58 km/h @ 8 m/s²: **78 m**
+
+**Quickstart (after `git pull`):**
+```powershell
+cd $env:USERPROFILE\ibmRacingLeague\ibmRacingLeague
+# Window A: TORCS running (Race → Quick Race → Corkscrew → scr_server 1 → 1 lap → New Race)
+# Window B:
+.\scripts\run_experiment.ps1 016   # then 017, then 018
+```
+
+---
+
+### Run 016 — Lookahead 200m / decel 7.0 m/s² (conservative)
+
+**Hypothesis:** Conservative brake window guarantees no overshoot on either hairpin (s09, s13).
+Full-throttle straights should recover ~5–8 s vs Run 013 even with early braking.
+
+**Config:** `--lookahead 200 --lookahead-decel 7.0 --segments telemetry/segments.yaml`
+
+**Expected:** 155–162 s, 0 damages. If braking is too early (car enters corners slow), tighten in Run 017.
+
+**Run 016 result:** _pending_
+
+---
+
+### Run 017 — Lookahead 150m / decel 9.0 m/s² (moderate)
+
+**Hypothesis:** Tighter brake window lets the car carry more speed into the straight before braking.
+9 m/s² is within TORCS car's demonstrated capability (Run 008 shows ~0.5g lateral on hairpins).
+
+**Config:** `--lookahead 150 --lookahead-decel 9.0 --segments telemetry/segments.yaml`
+
+**Expected:** 150–158 s, 0 damages.
+
+**Run 017 result:** _pending_
+
+---
+
+### Run 018 — Lookahead 120m / decel 11.0 m/s² (aggressive)
+
+**Hypothesis:** Maximum late-braking — assumes car can decelerate 1.1g. High risk of corner entry
+overshoot if decel assumption is optimistic. Best-case lap if the car tracks.
+
+**Config:** `--lookahead 120 --lookahead-decel 11.0 --segments telemetry/segments.yaml`
+
+**Expected:** 145–155 s if clean; damages possible.
+
+**Run 018 result:** _pending_
