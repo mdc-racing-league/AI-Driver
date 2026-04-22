@@ -103,12 +103,18 @@ def drive(state: dict) -> dict:
     steer = max(-1.0, min(1.0, steer))
 
     target = target_speed_for(state)
-    if speed_x < target:
+    err = speed_x - target
+    # Proportional brake with a 1 km/h deadband. Overshoot scales to a real
+    # stop: 6% brake per km/h, capped at 0.8. Below target, full accel; in
+    # the deadband, light maintenance throttle. This replaces the old
+    # 3-branch logic whose 0.05 brake couldn't decelerate into hairpins
+    # (Run 013: s09 v_min 59 km/h against a 50 km/h target — coast-only).
+    if err > 1.0:
+        accel = 0.0
+        brake = min(0.8, (err - 1.0) * 0.06)
+    elif speed_x < target - 1.0:
         accel = 0.3
         brake = 0.0
-    elif speed_x > target + 10:
-        accel = 0.0
-        brake = 0.05
     else:
         accel = 0.1
         brake = 0.0
