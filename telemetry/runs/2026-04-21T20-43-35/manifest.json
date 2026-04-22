@@ -1,0 +1,27 @@
+{
+  "run_id": "bb372ace-2d4e-48af-bd6c-a25b54b97fff",
+  "schema_version": "v0.2",
+  "started_at": "2026-04-21T20:43:35-04:00",
+  "ended_at": "2026-04-21T20:47:11-04:00",
+  "controller_type": "baseline",
+  "controller_variant_id": "487c6de",
+  "frame_count": 10706,
+  "segment_ids_seen": [
+    "s00_start_straight"
+  ],
+  "outcome": {
+    "completed": true,
+    "crashed": false,
+    "laps_completed": 1,
+    "best_lap_seconds": 212.986,
+    "total_time_seconds": 212.986,
+    "final_damage": 0.0,
+    "stop_reason": "race ended (curLapTime frozen at 212.99s for 400 ticks)",
+    "steps": 10706
+  },
+  "track": "corkscrew",
+  "car": "unknown",
+  "driver": "louis",
+  "weather": "clear",
+  "notes": "Run 006 - SCHEMA v0.2 archive, post-race-frame fix"
+}
