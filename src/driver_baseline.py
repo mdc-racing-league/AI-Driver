@@ -177,6 +177,7 @@ def main(argv: list[str] | None = None) -> int:
     last_lap_seen = 0.0
     last_cur_lap = 0.0
     current_lap_number = 1
+    race_finalized = False
     stop_reason = "maxSteps reached"
 
     try:
@@ -196,6 +197,7 @@ def main(argv: list[str] | None = None) -> int:
                     lap_splits.append(last_lap)
                     print(f"[driver_baseline] LAP {len(lap_splits)} complete (lastLapTime): {last_lap:.3f}s")
                     current_lap_number = len(lap_splits) + 1
+                    race_finalized = True
                 last_lap_seen = last_lap
 
             if last_cur_lap > 30.0 and cur_lap < 2.0 and cur_lap < last_cur_lap - 10.0:
@@ -203,6 +205,7 @@ def main(argv: list[str] | None = None) -> int:
                     lap_splits.append(last_cur_lap)
                     print(f"[driver_baseline] LAP {len(lap_splits)} complete (curLapTime reset): {last_cur_lap:.3f}s")
                     current_lap_number = len(lap_splits) + 1
+                    race_finalized = True
 
             if cur_lap > 0.1:
                 race_started = True
@@ -226,7 +229,10 @@ def main(argv: list[str] | None = None) -> int:
                 client.R.d[k] = v
             client.respond_to_server()
 
-            if logger is not None:
+            # Stop logging once the race is over: scr_server keeps sending
+            # post-race frames with curLapTime reset/frozen, which would
+            # violate the schema's monotonic-time rule.
+            if logger is not None and not race_finalized:
                 logger.log_frame(
                     sensors=sensors,
                     action=action,
