@@ -1,0 +1,27 @@
+{
+  "run_id": "0d69b80b-81bf-4126-a88c-42613912c507",
+  "schema_version": "v0.2",
+  "started_at": "2026-04-22T06:40:31-04:00",
+  "ended_at": "2026-04-22T06:43:25-04:00",
+  "controller_type": "baseline",
+  "controller_variant_id": "504f458",
+  "frame_count": 7940,
+  "segment_ids_seen": [
+    "s00_start_straight"
+  ],
+  "outcome": {
+    "completed": true,
+    "crashed": false,
+    "laps_completed": 1,
+    "best_lap_seconds": 165.666,
+    "total_time_seconds": 165.666,
+    "final_damage": 0.0,
+    "stop_reason": "race ended (curLapTime frozen at -0.00s for 400 ticks)",
+    "steps": 8340
+  },
+  "track": "corkscrew",
+  "car": "unknown",
+  "driver": "louis",
+  "weather": "clear",
+  "notes": "Run 013 - s08 pushed to 95, s09 start 2380"
+}
