@@ -169,6 +169,47 @@ Success criterion: **damages → 0, lap time ≤ 170.566 s.** Failure modes: sti
 - `target_speed_for()` returns default when no zone matches, zone speed when inside, respects first-match-wins, falls back to `distRaced` if `distFromStart` missing.
 - `_parse_slow_zones()` parses `START:END:SPEED`, raises `ValueError` on malformed specs, raises when end ≤ start.
 
+### Run 008 — Path A execution (driver_baseline.py, commit `447a5c3`, `--target-speed 80 --slow-zone`) — 🧹 CLEAN BASELINE
+
+**Lap time: `2:55.11` (175.106 s) on Corkscrew, zero damages, zero off-tracks — the first legal, repeatable sub-3:00 reference.** Evidence: `docs/screenshots/2026-04-22_run008-path-a-clean-lap.png`.
+
+| Field | Value |
+|---|---|
+| Track | Corkscrew (road) |
+| Race mode | Quick Race, solo |
+| Start | Standing start, grid pole |
+| Driver | `scr_server 1` → `src/driver_baseline.py` |
+| Target speed | **80 km/h** default |
+| Slow zones (`--slow-zone`) | `3170:3434:50` (prime spin corner), `2366:2596:50` (mild drift) |
+| Finishing order | **P1** |
+| **Lap time (driver log + TORCS scoreboard)** | **`175.106 s` (`2:55.11`)** — match to 0.01 s |
+| Laps completed | **1** |
+| Top speed (scoreboard) | 90 km/h |
+| Damages | **0** (Run 007: 41) |
+| Off-track events (`\|trackPos\|` > 1.0) | **0** (Run 007: 2) |
+| Pit stops | 0 |
+| Frames captured | 8,812 |
+| Validator | **PASS** (`schema v0.2`) |
+| Archive | `telemetry/runs/2026-04-21T22-28-24/` |
+
+**Hypothesis confirmed.** Slowing the two corners that Run 007 spun through eliminated every damage and off-track event while costing **only +4.540 s vs Run 007's dirty lap**:
+
+| Metric | Run 006 (55 clean) | Run 007 (80 dirty) | Run 008 (80+zones clean) |
+|---|---|---|---|
+| Lap time | 212.986 s | 170.566 s | **175.106 s** |
+| vs. Run 006 | — | −42.42 s (−19.9%) | **−37.88 s (−17.8%)** |
+| Top speed | 65 km/h | 90 km/h | 90 km/h |
+| Damages | 0 | 41 | **0** |
+| Off-tracks | 0 | 2 | **0** |
+| Rubric gate `≤180.98`? | ❌ | ✅ | ✅ |
+
+**Run 008 is now the clean baseline for Phase 3 tuning.** Run 007's 170.566 s is faster on paper but unsafe — Run 008 is what we trust under judging conditions. Future A/B comparisons anchor on Run 008.
+
+**What Run 008 unlocks:**
+- PD/PID steering can be measured against a *clean* reference, not a *lucky* one.
+- Path B (push 80 → 100 km/h) is now a bonus question, not a necessity — the gate is cleared cleanly.
+- Stretch target `≤2:30` becomes the single remaining Phase 3 deliverable.
+
 ### Target for Phase 3 tuning
 
 Mission brief requires a **-15% improvement vs. baseline** before Phase 4. That means Phase 3 must deliver **≤ 3:00.98** on Corkscrew (≤ 180.98 s). Current headroom: raise target speed, segment-aware braking/throttle, possibly a PID on heading instead of pure P.
