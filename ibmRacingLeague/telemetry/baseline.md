@@ -226,3 +226,164 @@ Chosen to guarantee track-keeping on the Corkscrew hairpin at the expense of lap
 2. Add a new `### Run NNN` section above, matching this schema
 3. Commit: `git add telemetry/baseline.md telemetry/runs/... && git commit -m "run NNN: <headline>"`
 4. Run `scripts/validate_run.py telemetry/runs/<ISO-timestamp>/` (Phase 2 item)
+
+### Run 009 — 2026-04-22 (driver_baseline.py, commit after `447a5c3`, narrowed slow zones) — PERSONAL BEST at this point
+
+**Lap time: `2:50.04` (170.044 s) on Corkscrew, zero damages, zero off-tracks.**
+CLI: `--target-speed 80 --slow-zone 3170:3434:50 --slow-zone 2366:2596:50` (zone boundaries tightened vs Run 008).
+Evidence: `docs/screenshots/2026-04-22_run009-narrow-zones-2-50-04.png`.
+
+| Field | Value |
+|---|---|
+| Track | Corkscrew (road) |
+| Race mode | Quick Race, solo |
+| Start | Standing start, grid pole |
+| Target speed | 80 km/h |
+| Slow zones | `3170:3434:50`, `2366:2596:50` (narrowed vs Run 008) |
+| Finishing order | **P1** |
+| **Lap time** | **`170.044 s` (`2:50.04`)** |
+| Top speed | 90 km/h |
+| Damages | **0** |
+| Off-tracks | **0** |
+| Frames | 8,159 — **PASS** |
+| Archive | `telemetry/runs/2026-04-21T22-42-18/` |
+| Screenshot | `docs/screenshots/2026-04-22_run009-narrow-zones-2-50-04.png` |
+
+Narrowed slow-zone boundaries (zones tightened vs Run 008). Faster than Run 007's dirty lap by 0.522 s. Clean. **Personal best at this point.** Key telemetry: hairpin A peaked trackPos −0.53 (safe), hairpin B peaked −0.48 (safe). Post-hairpin coasted to 84–90 km/h.
+
+---
+
+### Run 010 — 2026-04-22 (first run with `--segments telemetry/segments.yaml`)
+
+**Lap time: `2:55.27` (175.266 s) on Corkscrew, zero damages, zero off-tracks.**
+First run using the 14-segment Corkscrew YAML map.
+
+| Field | Value |
+|---|---|
+| Track | Corkscrew (road) |
+| Race mode | Quick Race, solo |
+| Start | Standing start, grid pole |
+| Controller | `--segments telemetry/segments.yaml` |
+| Finishing order | **P1** |
+| **Lap time** | **`175.266 s` (`2:55.27`)** |
+| Top speed | 90 km/h |
+| Damages | **0** |
+| Off-tracks | **0** |
+| Frames | ~8,800 — **PASS** |
+| Archive | `telemetry/runs/2026-04-22T06-10-57/` |
+
+First run using the segment YAML (14-segment Corkscrew map). Segment report revealed: s08 straight avg 93 km/h (biggest time bucket), s11 corner safely handles 88+ km/h (target was 78 — over-conservative). Slower than Run 009 because segment targets were conservative on first pass. Key learning: s09 held 60 km/h for 9.12 s — braking too early.
+
+---
+
+### Run 011 — 2026-04-22 (`--segments` with raised s08/s09 targets) — REGRESSION
+
+**Lap time: `3:03.04` (183.04 s) on Corkscrew — regression vs Run 010.**
+
+| Field | Value |
+|---|---|
+| Track | Corkscrew (road) |
+| Race mode | Quick Race, solo |
+| Start | Standing start, grid pole |
+| Controller | `--segments` with raised s08/s09 targets |
+| Finishing order | **P1** |
+| **Lap time** | **`183.04 s` (`3:03.04`)** |
+| Damages | unknown |
+| Off-tracks | possible |
+| Archive | `telemetry/runs/2026-04-22T06-22-44/` |
+
+Regressed vs Run 010. Segment target adjustments were too aggressive in wrong segments; s09 entry speed pushed car to off-track. Used to diagnose segment boundary issues. Phase3-experiments.md was updated with learnings.
+
+---
+
+### Run 012 — 2026-04-22 (`--segments` infrastructure validated, segments.yaml rebalanced)
+
+**Lap time: `2:50.36` (170.36 s) on Corkscrew, zero damages, zero off-tracks.**
+Confirms segment YAML infrastructure is neutral after rebalancing.
+
+| Field | Value |
+|---|---|
+| Track | Corkscrew (road) |
+| Race mode | Quick Race, solo |
+| Start | Standing start, grid pole |
+| Controller | `--segments` (segments.yaml rebalanced after Run 011) |
+| Finishing order | **P1** |
+| **Lap time** | **`170.36 s` (`2:50.36`)** |
+| Top speed | 90 km/h |
+| Damages | **0** |
+| Off-tracks | **0** |
+| Frames | **PASS** |
+| Archive | `telemetry/runs/2026-04-22T06-30-45/` |
+
+Matched Run 009 within 0.3 s — confirms segment YAML infrastructure is neutral (doesn't regress clean baseline). Key finding from segment report: s08 avg 93 km/h (30.2 s bucket, biggest time opportunity). s11 safely handles 88 km/h vs 78 km/h target — free time available.
+
+---
+
+### Run 013 — 2026-04-22 (`--segments`, s08 raised to 95 km/h, s09 start moved to 2380 m) — 🏆 PERSONAL BEST
+
+**Lap time: `2:45.66` (165.666 s) on Corkscrew, zero damages, zero off-tracks. −4.7 s vs Run 012.**
+Evidence: in `docs/screenshots`.
+
+| Field | Value |
+|---|---|
+| Track | Corkscrew (road) |
+| Race mode | Quick Race, solo |
+| Start | Standing start, grid pole |
+| Controller | `--segments` (s08=95 km/h, s09 start=2380 m) |
+| Finishing order | **P1** |
+| **Lap time** | **`165.666 s` (`2:45.66`)** |
+| Top speed | **95 km/h** |
+| Damages | **0** |
+| Off-tracks | **0** |
+| Frames | **PASS** |
+| Archive | `telemetry/runs/2026-04-22T06-40-31/` |
+
+**−4.7 s vs Run 012.** Hypothesis validated: s08 had headroom to 95 km/h. Clean throughout. **This is the current submission-target lap.** Competition format is one standing-start lap on Corkscrew — this is the reference.
+
+---
+
+### Run 014 — 2026-04-22 (proportional brake controller, commit `d52e421`) — REGRESSION
+
+**Lap time: `2:53.26` (173.26 s) on Corkscrew — regression vs Run 013 (−7.6 s slower).**
+
+| Field | Value |
+|---|---|
+| Track | Corkscrew (road) |
+| Race mode | Quick Race, solo |
+| Start | Standing start, grid pole |
+| Controller | Proportional brake (commit `d52e421`) |
+| Finishing order | **P1** |
+| **Lap time** | **`173.26 s` (`2:53.26`)** |
+| Damages | **0** |
+| Archive | `telemetry/runs/2026-04-22T06-XX-XX/` |
+
+Proportional brake deadband killed the free overshoot past segment targets on straights (s10, s11, s12 naturally coast to 84–90 km/h under old controller; proportional brake prevented this). Net result: slower. Run 013 settings restored in Run 015.
+
+---
+
+### Run 015 — 2026-04-22 (restored straight throttle, raised hairpin targets, commit `c9b990a`)
+
+**Lap time: `2:49.09` (169.126 s) on Corkscrew — slower than Run 013 (+3.5 s).**
+
+| Field | Value |
+|---|---|
+| Track | Corkscrew (road) |
+| Race mode | Quick Race, solo |
+| Start | Standing start, grid pole |
+| Controller | Restored straight throttle, raised hairpin targets (commit `c9b990a`) |
+| Finishing order | **P1** |
+| **Lap time** | **`169.126 s` (`2:49.09`)** |
+| Damages | **0** |
+| Archive | `telemetry/runs/2026-04-22T06-XX-XX/` |
+
+Proportional brake's deadband still penalized free coasting overshoot on straights. Run 013 remains the personal best. **Decision: Run 013 is current submission reference.** Next direction: lookahead brake controller (Runs 016–018) which keeps full throttle on straights and only brakes in anticipation of upcoming corners.
+
+---
+
+## Current submission target
+
+| Run | Lap time | Damages | Off-tracks | Controller |
+|---|---|---|---|---|
+| **Run 013** | **165.666 s (2:45.66)** | **0** | **0** | Segment YAML, s08=95 km/h |
+
+**Lookahead controller (Runs 016–018) is in progress and may supersede Run 013.**
