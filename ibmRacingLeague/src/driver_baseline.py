@@ -163,6 +163,10 @@ def main(argv: list[str] | None = None) -> int:
             )
         print(f"[driver_baseline] telemetry archive: {logger.run_dir}")
 
+    # snakeoil3_gym's Client() constructor re-parses sys.argv via getopt and
+    # rejects any flag it doesn't know (e.g. our --notes). Our args have
+    # already been consumed above, so neuter argv before handing off.
+    sys.argv = [sys.argv[0]]
     client = snakeoil.Client(p=3001)
     client.MAX_STEPS = MAX_STEPS
 
