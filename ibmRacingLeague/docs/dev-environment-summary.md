@@ -86,13 +86,20 @@ What it does:
 
 Run 001 numbers (`telemetry/baseline.md`): **lap time `3:32.92`**, damages **0**, top speed 65 km/h, finished **P1**. `trackPos` stayed in ±0.66 the full race (never left the track). Phase 3 target is now concrete — we need to beat `3:00.98` (-15% of baseline) to hit the rubric. Evidence: `docs/screenshots/2026-04-21_phase2-day1-p1-finish.png` (TORCS Race Results screen).
 
-Still TODO: per-lap time logging (currently only total) and fixing the ghost-tick loop after race end. Both are next-session items, not correctness bugs.
+Still TODO after Run 001: per-lap time logging (currently only total) and fixing the ghost-tick loop after race end. Both are next-session items, not correctness bugs.
+
+## Update — Apr 22 AM: Run 001 soft bugs closed
+
+Three iterations across 4 runs (`7fcfab3`, `1d2b003`, `9e1d1c3`) replaced both instrumentation gaps:
+
+- **Per-lap timing now from the driver log.** Three-path capture: `lastLapTime` (primary), `curLapTime` reset (fallback), final-on-race-end (catches single-lap races where `scr_server` stops mid-lap). All three paths deduped against a 1 s tolerance so the same crossing can't double-count.
+- **Race-end detection works.** Keyed on **stale `curLapTime`**, not on speed/lapTime zeros. Learned the hard way that after a race ends, `scr_server` keeps sending the **final frame frozen** (speed 64.8 km/h, lapTime 212.81 s) forever — zeros never come. With the new detector, loop exits at step ~10,700 instead of running to 99,999.
+- **Run 002 (canonical):** `3:32.81` (`212.806 s`) from the driver log, matches scoreboard to 0.01 s. **Cross-run check across 4 runs: 0.144 s spread (0.068%)** — TORCS + our controller are effectively deterministic, so Phase 3 A/B comparisons can trust single-run deltas down to ~0.1 s. Evidence: `docs/screenshots/2026-04-22_phase2-day1-run002-clean.png`.
 
 ## What's next
 
-1. Fix `driver_baseline.py` race-end detection + log `lastLapTime` so Run 002 gives us a real per-lap number
-2. **Phase 2 core work** (originally May 4–14, now active): extended SCHEMA v0.2 telemetry logger that reads from `snakeoil3.state` per tick; wire `scripts/run_race.py` to orchestrate both processes; 5-lap average baseline recorded
-3. **Then:** first labeled run archives → validator enforces schema → `telemetry/runs/` becomes a dataset we feed Granite for Phase 3 tuning
+1. **Phase 2 core work** (originally May 4–14, now active): extended SCHEMA v0.2 telemetry logger that reads from `snakeoil3.state` per tick; wire `scripts/run_race.py` to orchestrate both processes; 5-lap average baseline recorded
+2. **Then:** first labeled run archives → validator enforces schema → `telemetry/runs/` becomes a dataset we feed Granite for Phase 3 tuning
 
 ---
 

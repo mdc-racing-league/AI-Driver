@@ -73,8 +73,8 @@ The IBM bundle uses the **Simulated Car Racing (SCR) architecture**: TORCS ships
 - ⬜ Wire `scripts/run_race.py` full impl — orchestrates both `wtorcs.exe` + Python client, handles the two-process startup
 - ⬜ Test harness: 5-lap average, same start conditions — `scripts/run_race.py --laps 5`
 - ⬜ Every run archive must pass `scripts/validate_run.py` before commit
-- 🔄 Record baseline lap time in `telemetry/baseline.md` — first entry logged 2026-04-21 PM; need clean per-lap split (driver currently logs `curLapTime` only, not `lastLapTime`)
-- ⬜ Fix `driver_baseline.py` race-end detection — after `scr_server` closes the race, loop runs 90k empty ticks instead of exiting (soft bug, doesn't affect lap validity)
+- ✅ Record baseline lap time in `telemetry/baseline.md` — Run 001 (scoreboard) + Run 002 (driver log, 2026-04-22 AM) archived. Cross-run determinism verified: 4 runs, 0.144 s spread (0.068%). Commit `9e1d1c3`.
+- ✅ Fix `driver_baseline.py` race-end detection + per-lap logging — commits `7fcfab3`, `1d2b003`, `9e1d1c3`. Loop now exits at ~10,700 steps via stale-`curLapTime` detection (400 consecutive frozen ticks) instead of 99,999. Three-path lap capture: `lastLapTime` (primary) → `curLapTime` reset (fallback) → final-on-race-end (catches single-lap races where scr_server stops mid-lap). All three paths deduped against a 1-second tolerance.
 - ⬜ Daily commits to `main`
 
 ## Phase 3 — Performance tuning (May 15 – June 4) — *pulled forward 3 days*
@@ -116,6 +116,7 @@ Tracks how far ahead (+) or behind (−) the original plan we are. Update whenev
 | 2026-04-21 AM (Phase 1 Track B closed) | **+6 days** | 20-min morning session: repo cloned locally, Python 3.12.10 verified, `gym==0.26.2` installed. Discovered `snakeoil3_gym.py` is pure stdlib — tonight's smoke test has no prep. Only remaining Track B item is reading docs/schema end-to-end. |
 | 2026-04-21 AM (Phase 2 Day 1 done early) | **+6 → +7 days** | Pre-work smoke test passed on first try: Python→UDP→TORCS round-trip verified, car driven around Corkscrew under snakeoil3 demo control. Phase 2 Day 1 goal achieved ~9 days ahead of original plan. Next: actually write `src/driver_baseline.py`. Evidence: `docs/screenshots/2026-04-21_phase1-smoke-test-success.png`. |
 | 2026-04-21 PM (`driver_baseline.py` shipped) | **+7 → +9 days** | First real custom driver completes a clean Corkscrew lap and finishes in **1st place** with lap time **`3:32.92`**, damages **0**. 3 iterations tonight: scalar-vs-list action fix, then canonical SCR steering formula + 55 km/h target + off-track recovery. `trackPos` stayed on-track the full race. Phase 2's main deliverable reached — next session is telemetry logger + run archive wiring, not driver correctness. Phase 3's target is now concrete: ≤ `3:00.98` (-15% vs baseline). Evidence: `docs/screenshots/2026-04-21_phase2-day1-p1-finish.png`. |
+| 2026-04-22 AM (Run 001 soft bugs closed) | **+9 days (held)** | Per-lap timing now captured from the driver log, not the scoreboard. Race-end detection keyed on stale `curLapTime` (not speed/lapTime zeros — scr_server sends the final frame frozen). Loop exits at ~10,700 steps, no more 99k ghost ticks. Run 002 clean: lap `3:32.81` from driver log matches scoreboard to 0.01 s. Cross-run determinism: 4 runs, 0.144 s spread — Phase 3 A/B comparisons can trust single-run deltas down to ~0.1 s. Commits: `7fcfab3`, `1d2b003`, `9e1d1c3`. Evidence: `docs/screenshots/2026-04-22_phase2-day1-run002-clean.png`. |
 | — | — | — |
 
 **Escalation rule:** if buffer drops below **+0 days** (on-schedule or behind) at any phase boundary, pause and replan. Do not compress by cutting scope without team discussion.
