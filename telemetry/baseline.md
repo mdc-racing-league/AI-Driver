@@ -101,6 +101,43 @@ Fix: commit `487c6de` adds a `race_finalized` flag set from both lap-detection p
 
 **Architectural note — passed by luck.** This run's race-end behavior was the *frozen* variant (Run 002-style), not the *zero-reset* variant (Run 005-style). Frozen-equal frames satisfy "non-decreasing" by exact equality. If a future run lands the zero-reset variant **and** the lap completes via the `final-on-race-end` path (so `race_finalized` doesn't flip until after 400 stale ticks have already been logged), validation will fail again. The robust fix is to flip `race_finalized` after ~10 stale ticks instead of waiting 400. Deferred — will land if/when the next failure forces it.
 
+### Run 007 — 2026-04-22 (driver_baseline.py, commit `0822c99`, `--target-speed 80`) — 🏆 PHASE 3 TARGET HIT
+
+**Lap time: `2:50.57` (170.566 s) on Corkscrew, first experiment above baseline target speed.** That's **−19.9% vs Run 006 canonical** (212.986 → 170.566) — comfortably below the −15% Phase 3 rubric gate (`≤3:00.98`) in a single config change. Evidence: `docs/screenshots/2026-04-22_phase3-day1-run007-target80-2-50-57.png`.
+
+| Field | Value |
+|---|---|
+| Track | Corkscrew (road) |
+| Race mode | Quick Race, solo |
+| Start | Standing start, grid pole |
+| Driver | `scr_server 1` → `src/driver_baseline.py` |
+| Target speed | **80 km/h** (via `--target-speed 80`) |
+| Finishing order | **P1** |
+| **Lap time (driver log + TORCS scoreboard)** | **`170.566 s` (`2:50.57`)** — match to 0.01 s |
+| Laps completed | **1** |
+| Top speed (scoreboard) | **90 km/h** |
+| Damages | **41** (up from 0 at 55 km/h) |
+| Off-track events (`\|trackPos\|` > 1.0) | **2**: mild at step 5600 (−1.41), **severe at step 7400 (−3.77, ~4 s recovery)** |
+| Pit stops | 0 |
+| Frames captured | 8,585 |
+| Validator | **PASS** (`schema v0.2`) |
+| Archive | `telemetry/runs/2026-04-21T21-09-16/` |
+
+**What 80 km/h bought us vs. 55 km/h:**
+
+| Metric | Run 006 (55) | Run 007 (80) | Delta |
+|---|---|---|---|
+| Lap time | 212.986 s | 170.566 s | **−42.42 s** (−19.9%) |
+| Top speed | 65 km/h | 90 km/h | +25 km/h |
+| Damages | 0 | 41 | +41 |
+| Off-tracks | 0 | 2 (1 severe) | +2 |
+
+**Interpretation — 80 km/h is past the P-only steering's stability margin.** The −3.77 spin near lap-time 154 s is where we pick up both off-tracks and all 41 damage points. A clean lap at 80 km/h would be strictly faster than 170.566; the two recoveries cost 4+ seconds directly plus unknown carry-over from damage-induced sluggishness.
+
+**Next experiment candidates (Run 008):**
+- **Path A — slow-zone the hairpin.** Identify segment around lap-time 154 s, hardcode target to ~50 km/h across that window, keep 80 elsewhere. Hypothesis: damage → 0, lap time → mid-160s.
+- **Path B — push to 100 km/h.** Find the failure wall. If stable: faster again. If full crash: PD steering becomes the next-priority deliverable.
+
 ### Target for Phase 3 tuning
 
 Mission brief requires a **-15% improvement vs. baseline** before Phase 4. That means Phase 3 must deliver **≤ 3:00.98** on Corkscrew (≤ 180.98 s). Current headroom: raise target speed, segment-aware braking/throttle, possibly a PID on heading instead of pure P.
