@@ -65,6 +65,42 @@ Lap-time stability across the Phase 2 Day 1 instrumentation iterations (same con
 
 Spread: 0.144 s across 4 runs (0.068%). TORCS + `scr_server` + our driver are effectively deterministic on this controller. Phase 3 A/B comparisons can trust single-run deltas down to ~0.1 s.
 
+### Run 005 — 2026-04-22 (driver_baseline.py, commit `df41e63`) — FAILED VALIDATION
+
+First attempt at a SCHEMA v0.2 archive. Driver wrote `frames.ndjson` + `manifest.json` correctly, but `validate_run.py` flagged **1 schema violation**:
+
+```
+line 10299: time went backwards: 0.00199487 < previous 212.806
+```
+
+Root cause: after the lap completes, `scr_server` keeps sending UDP frames with `curLapTime` reset to ≈0.00 (Run 005's behavior; Run 002 had it frozen at 212.81 — the post-race state is **non-deterministic between runs**). The driver was logging those frames into the archive, breaking SCHEMA Rule 3 (time monotonically non-decreasing). Lap time itself: `212.824 s` — within 0.018 s of Run 002, so the controller is fine; only the logger gating was wrong.
+
+Fix: commit `487c6de` adds a `race_finalized` flag set from both lap-detection paths; subsequent ticks skip `logger.log_frame()`. Stale-tick exit detector still runs to break out of the loop cleanly.
+
+### Run 006 — 2026-04-22 (driver_baseline.py, commit `487c6de`) — CANONICAL v0.2 ARCHIVE
+
+**First SCHEMA v0.2 archive that passes `validate_run.py` (10,706 frames, 0 errors).**
+
+| Field | Value |
+|---|---|
+| Track | Corkscrew (road) |
+| Race mode | Quick Race, solo |
+| Start | Standing start, grid pole |
+| Driver | `scr_server 1` → `src/driver_baseline.py` |
+| Target speed | 55 km/h |
+| Finishing order | **P1** |
+| **Lap time (driver log, `final-on-race-end`)** | **`212.986 s` (`3:32.99`)** |
+| Laps completed | **1** |
+| Top speed observed | 65 km/h |
+| Damages | **0** |
+| Pit stops | 0 |
+| Loop exit | `race ended (curLapTime frozen at 212.99s for 400 ticks)` at step 10,706 |
+| Frames captured | **10,706** |
+| Validator | **PASS** (`schema v0.2`) |
+| Archive | `telemetry/runs/2026-04-21T20-43-35/` |
+
+**Architectural note — passed by luck.** This run's race-end behavior was the *frozen* variant (Run 002-style), not the *zero-reset* variant (Run 005-style). Frozen-equal frames satisfy "non-decreasing" by exact equality. If a future run lands the zero-reset variant **and** the lap completes via the `final-on-race-end` path (so `race_finalized` doesn't flip until after 400 stale ticks have already been logged), validation will fail again. The robust fix is to flip `race_finalized` after ~10 stale ticks instead of waiting 400. Deferred — will land if/when the next failure forces it.
+
 ### Target for Phase 3 tuning
 
 Mission brief requires a **-15% improvement vs. baseline** before Phase 4. That means Phase 3 must deliver **≤ 3:00.98** on Corkscrew (≤ 180.98 s). Current headroom: raise target speed, segment-aware braking/throttle, possibly a PID on heading instead of pure P.
