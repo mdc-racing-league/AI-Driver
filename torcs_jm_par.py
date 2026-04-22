@@ -491,11 +491,11 @@ if __name__ == "__main__":
 import math
 
 # ================= USER CONFIGURABLE PARAMETERS =================
-TARGET_SPEED = 100  # Target speed in km/h. Increasing this makes the car go faster but may reduce stability.
-STEER_GAIN = 30     # Steering sensitivity. Higher values make the car turn more aggressively.
-CENTERING_GAIN = 0.20  # How strongly the car corrects its position toward the center of the track.
-BRAKE_THRESHOLD = 0.9  # Angle threshold for braking. Lower values brake earlier.
-GEAR_SPEEDS = [0, 20, 40, 80, 100, 180]  # Speed thresholds for gear shifting.
+TARGET_SPEED = 90  # Target speed in km/h. Increasing this makes the car go faster but may reduce stability.
+STEER_GAIN = 35     # Steering sensitivity. Higher values make the car turn more aggressively.
+CENTERING_GAIN = 0.30  # How strongly the car corrects its position toward the center of the track.
+BRAKE_THRESHOLD = 1.0  # Angle threshold for braking. Lower values brake earlier.
+GEAR_SPEEDS = [10, 22, 43, 79, 105, 175]  # Speed thresholds for gear shifting.
 ENABLE_TRACTION_CONTROL = True  # Toggle traction control system.
 
 # ================= HELPER FUNCTIONS =================
