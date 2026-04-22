@@ -127,8 +127,8 @@ segments:
   - id: s08_straight
     kind: straight
     start_m: 1600.0
-    end_m: 2420.0
-    target_speed_kmh: 80.0
+    end_m: 2380.0
+    target_speed_kmh: 95.0
     observed:
       len_m: 830.0
       speed_avg: 58.2
@@ -138,13 +138,14 @@ segments:
       steer_peak_abs: 0.294
       steer_mean_signed: 0.012
     notes: >
-      Run 012: s08 ends at 2420 (where Run 009's proven --slow-zone began).
-      Earlier attempts: Run 010 used 2430 (derived), Run 011 pushed to 2500
-      and crashed (see phase3-experiments.md).
+      Run 013: target bumped 80->95 to exploit long straight (controller's
+      +10 overshoot band means effective top speed ~105 km/h). s08 end
+      pulled back 40 m (2420->2380) so the 50 km/h zone starts earlier,
+      giving more coast-down before s09's apex.
 
   - id: s09_turn_R_2605m
     kind: corner
-    start_m: 2420.0
+    start_m: 2380.0
     end_m: 2540.0
     target_speed_kmh: 50.0
     observed:
@@ -156,11 +157,12 @@ segments:
       steer_peak_abs: 0.657
       steer_mean_signed: 0.042
     notes: >
-      Run 012: matches Run 009's hand-placed slow-zone 2420:2540 exactly.
-      Run 011's 2500:2650 failed catastrophically (95 damage, off-track
-      peak |trackPos|=3.52) because start was pushed FORWARD instead of
-      back -- only ~80m of coast-down before the apex at ~2580, car
-      entered corner at ~70 km/h into a 50 km/h corner.
+      Run 013: start pulled back 2420->2380 to absorb Run 013's +15 km/h
+      entry speed from faster s08. End unchanged at 2540 (Run 009/012
+      proven). Apex is near 2500 per Run 011 post-mortem, so 160 m of
+      slow zone leaves ~120 m of coast-down from 100+ km/h -> ~50 km/h.
+      Run 012: 2420:2540 proved safe at 80 km/h entry (peak |trackPos|
+      0.67, v_min 59.4).
 
   - id: s10_straight
     kind: straight
