@@ -1,0 +1,27 @@
+{
+  "run_id": "12d84737-3abe-4661-8ba1-467a67594883",
+  "schema_version": "v0.2",
+  "started_at": "2026-04-22T20:16:57-04:00",
+  "ended_at": "2026-04-22T20:19:18-04:00",
+  "controller_type": "baseline",
+  "controller_variant_id": "6eb02ba",
+  "frame_count": 6586,
+  "segment_ids_seen": [
+    "s00_start_straight"
+  ],
+  "outcome": {
+    "completed": false,
+    "crashed": false,
+    "laps_completed": 0,
+    "best_lap_seconds": null,
+    "total_time_seconds": null,
+    "final_damage": 25.0,
+    "stop_reason": "KeyboardInterrupt",
+    "steps": 6586
+  },
+  "track": "corkscrew",
+  "car": "unknown",
+  "driver": "louis",
+  "weather": "clear",
+  "notes": "run017 - Lookahead-150 Moderate"
+}
