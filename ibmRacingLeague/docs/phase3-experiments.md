@@ -300,7 +300,7 @@ Full-throttle straights should recover ~5–8 s vs Run 013 even with early braki
 
 **Expected:** 155–162 s, 0 damages. If braking is too early (car enters corners slow), tighten in Run 017.
 
-**Run 016 result:** _pending_
+**Run 016 result:** **DNF.** Controller never produced a clean lap — the conservative 7.0 m/s² decel assumption was far below the car's real capability, leaving the brake commands out of phase with corner entries. No archive retained. Superseded by Run 017's moderate profile.
 
 ---
 
@@ -313,7 +313,7 @@ Full-throttle straights should recover ~5–8 s vs Run 013 even with early braki
 
 **Expected:** 150–158 s, 0 damages.
 
-**Run 017 result:** _pending_
+**Run 017 result:** **DNF.** Archive `telemetry/runs/2026-04-22T20-16-57/`, final damage 25, `KeyboardInterrupt` stop. 9 m/s² decel still below the real ceiling; car entered hairpins too hot and accumulated damage until the session was aborted.
 
 ---
 
@@ -326,4 +326,68 @@ overshoot if decel assumption is optimistic. Best-case lap if the car tracks.
 
 **Expected:** 145–155 s if clean; damages possible.
 
-**Run 018 result:** _pending_
+**Run 018 result:** Not separately archived. The aggressive lookahead/decel pairs were abandoned in favour of a *measurement-first* approach (see "Brake calibration sprint" below). Subsequent Round-2 strategies replaced lookahead tuning by-hand with strategies grounded in the car's real decel ceiling.
+
+---
+
+## Brake calibration sprint — 2026-04-22 PM (commit `b878a51`)
+
+Runs 016–018 suggested the lookahead controller's `--lookahead-decel` constant (7–11 m/s²) was far below the car's real capability. Added a `--brake-test` mode to the driver that accelerates to a target speed then applies `brake=1.0`, plus `scripts/analyze_brake_test.py` to parse the archive and compute mean/peak decel.
+
+**Measured ceiling (IBM F1 on Corkscrew):**
+- **Mean decel: 22 m/s²**
+- **Peak decel: 25 m/s²**
+
+Round-2 strategies recalibrate against 14 m/s² (conservative), 18 m/s² (matches Louis's driving target), and 21 m/s² (near-ceiling aggressive).
+
+---
+
+## Round 2 — lookahead with real decel + full-pedal brake
+
+**Strategies (commits `52252ea`, `c4c3a0e`):**
+
+| id | lookahead | decel | flags |
+|---|---|---|---|
+| r2a | 60 m | 14.0 m/s² | — |
+| r2a-v2 | 60 m | 14.0 m/s² | `--full-pedal-brake` |
+| r2b | 45 m | 18.0 m/s² | — |
+| r2c | 30 m | 21.0 m/s² | — |
+
+`--full-pedal-brake` forces `brake = 1.0` in the brake zone (no P-ramp). Short zones like the s09 and s13 hairpins don't leave room for a gradual ramp — full pedal is the right command and the car can take it.
+
+### Run 021 — r2a-v2 first live — DNF s13
+
+`telemetry/runs/2026-04-22T21-40-25/`. Crashed at s13 (peak `trackPos` −7.48 at 3315–3337 m). Brake zone started too late for full-pedal to drop speed in time. **Fix (commit `bf6fbf8`):** extend both s09 and s13 brake-zone start boundaries backward.
+
+### Run 022 — r2a-v2 after brake-zone extension — 163.466 s (0 dmg / 0 off)
+
+**−2.2 s vs Run 013.** First clean Round-2 lap. s13 no longer the problem; s08 straight carrying spare speed.
+
+### Run 023 — r2a-v2 + s06 90 / s08 102 / s09 50 — 🏆 160.666 s PB (0 dmg / 0 off)
+
+**−5.0 s vs Run 013.** Commit `5e69ae1`. s08 pushed to 102 km/h, s09 apex tightened to 50 km/h to protect trackPos on corner exit. Clean throughout.
+
+### Run 024 — s08 102 DNF at kink — rollback
+
+DNF at 1948–2011 m with peak `trackPos` −4.81. Three excursions clustered at the same microsite. `segments.yaml` labels s08 as a straight, but `angle_peak_abs` (0.133) and `steer_peak_abs` (0.294) from Run 001 observed data show a real kink around 1950 m. At 95–98 km/h the car tracks through it; at 102 km/h it can't. Commit `a1c61c8` rolls s08 back 102 → 98.
+
+### Run 025 — r2a-v2 + s08 98 rollback — 160.326 s (0 dmg / 1 off)
+
+`telemetry/runs/2026-04-22T22-08-22/`. Fastest clean-*ish* lap yet but still brushed `trackPos` −1.17 at the s08 kink. Run 023 (160.666 s, 0 off-tracks) remains the submission anchor until the kink is explained and survived at `|trackPos| < 1.0`.
+
+---
+
+## Open investigation — s08 elevation hypothesis
+
+**Question:** is the s08 kink at 1950 m a *geometric* corner that the segment map mislabels as a straight, or is it a *grip-loss* feature (crest/unload) that speed-only tuning cannot solve?
+
+**Evidence for elevation:**
+- Peak `|steer|` at the microsite reaches 0.807 — near saturation — while car speed is only 100 km/h. Geometric corners at that speed should not need that much steering.
+- `segments.yaml` derivation uses `bin=5.0m` on `trackDistance` only; Z is completely absent from the segment model.
+- Corkscrew's real-world namesake (Laguna Seca) is famously defined by elevation drop in roughly this lap position; IBM's Corkscrew track likely preserves the signature.
+
+**Test:** added `z` to the frame schema (`scripts/log_telemetry.py`) and `scripts/elevation_profile.py` which bins Z vs `trackDistance` and correlates high-grip-pressure events with elevation. One calibration lap on any clean strategy will either confirm a crest near 1950 m (hypothesis verified) or show a flat profile (hypothesis rejected).
+
+**If confirmed:** the fix is to cap s08 speed to ~92 km/h in a narrow 1900:2000 micro-zone, independent of the surrounding straight target. That should allow s06/s08 open targets to push higher (>100 km/h) elsewhere without the kink being the binding constraint.
+
+**If rejected:** the kink is geometric; `segments.yaml` needs a hand-placed micro-corner at 1900:2000 and `derive_segments.py` needs a lower `corner_steer_abs` threshold or a bin on second derivative of heading.

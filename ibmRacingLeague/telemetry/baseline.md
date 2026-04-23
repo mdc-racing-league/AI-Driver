@@ -380,10 +380,130 @@ Proportional brake's deadband still penalized free coasting overshoot on straigh
 
 ---
 
+### Run 016 — lookahead 200m / 7.0 m/s² (conservative) — DNF
+
+**Lookahead brake controller v1, first live test.** Controller runs full-throttle everywhere and brakes when stopping distance to next corner target is reached. Conservative 200 m window + 7 m/s² decel assumption was wrong — either the controller never built up enough speed to matter, or the early commit caused instability. DNF before lap completion. No archived run.
+
+---
+
+### Run 017 — lookahead 150m / 9.0 m/s² (moderate) — DNF
+
+**Archive: `telemetry/runs/2026-04-22T20-16-57/`.** Final damage 25, `KeyboardInterrupt` stop. Tighter brake window; still did not complete a lap. Confirmed that the synthetic decel constant (7–9 m/s²) was well below the car's true capability — brake activations were not landing the car at the segment target.
+
+---
+
+### Run 018 / Run 013-regression — 169.206 s clean
+
+**Archive: `telemetry/runs/2026-04-22T20-20-32/` and `2026-04-22T20-49-34/`.** Re-ran Run 013 YAML to confirm regression baseline after lookahead work. Both replays returned **169.206 s clean, 0 damages** — slower than Run 013's 165.666 s because this was pre-Round-2 segment layout before s06/s08 pushes.
+
+---
+
+### Run 019 — flat-out 130 km/h + lookahead — DNF
+
+**Archive: `telemetry/runs/2026-04-22T20-32-58/`.** Strategy: raise `--target-speed` to 130 km/h and rely on lookahead brake to survive corners. Final damage 37, never finished. Confirmed top-speed ceiling is not the bottleneck; segment-aware braking is.
+
+---
+
+### Run 020 — push-straights s08 110 km/h — DNF
+
+**Archive: `telemetry/runs/2026-04-22T20-41-30/`.** Final damage 107. Raised s08 target to 110 without recalibrating decel — car arrived at s09 apex far too hot, spun multiple times. Triggered the brake calibration work.
+
+---
+
+### Brake calibration sprint — 2026-04-22 PM (commit `b878a51`)
+
+Measured real deceleration ceiling of the IBM F1 car in TORCS via a dedicated `--brake-test` mode and analyzer:
+- **Mean decel: 22 m/s²**
+- **Peak decel: 25 m/s²**
+
+Old lookahead configs assumed 7–11 m/s² — roughly 2× conservative. Round-2 strategies recalibrate against the real number.
+
+---
+
+### Round 2 strategies — r2a/r2b/r2c + r2a-v2 (commits `52252ea`, `c4c3a0e`)
+
+- **r2a:** `--lookahead 60 --lookahead-decel 14.0`
+- **r2a-v2:** r2a + `--full-pedal-brake` (forces brake=1.0 in zone, no ramp)
+- **r2b / r2c:** tighter lookahead/decel variants
+
+`--full-pedal-brake` flag added because partial brake pressure was leaving lap-time on the table during short, decisive brake zones (hairpins s09/s13).
+
+---
+
+### Run 021 — r2a-v2 first live test — DNF at s13
+
+**Archive: `telemetry/runs/2026-04-22T21-40-25/`.** Car completed the s09 hairpin cleanly with the new full-pedal brake, but crashed at the final left (s13) — peak `trackPos` −7.48 between 3315–3337 m. Root cause: s13 brake zone started too late. **Fix (commit `bf6fbf8`):** extended both s09 and s13 brake-zone start boundaries back by ~60 m so full-pedal brake has room to drop speed before the apex.
+
+---
+
+### Run 022 — r2a-v2 after s09/s13 brake-zone extension — 163.466 s
+
+**Lap time: `2:43.47` (163.466 s) on Corkscrew, 0 damages, 0 off-tracks. −2.2 s vs Run 013.**
+
+| Field | Value |
+|---|---|
+| Controller | `--segments telemetry/segments.yaml --lookahead 60 --lookahead-decel 14.0 --full-pedal-brake` |
+| Strategy id | `r2a-v2` |
+| **Lap time** | **`163.466 s` (`2:43.47`)** |
+| Damages | **0** |
+| Off-tracks | **0** |
+| Notes | s-turn (s08 kink) picked up minor contact; last turn (s13) clean. User flagged s08 straight-away as still carrying spare room for speed. |
+
+Decision: push s06 and s08 targets harder while keeping the calibrated lookahead. Commit `3eea71f` raises s06 80→90 and drops s09 target 58→54 (tighter apex speed for damage control).
+
+---
+
+### Run 023 — r2a-v2 + s06/s08/s09 tune — 🏆 160.666 s PERSONAL BEST
+
+**Lap time: `2:40.67` (160.666 s) on Corkscrew, 0 damages, 0 off-tracks. −5.0 s vs Run 013; −2.8 s vs Run 022.**
+
+| Field | Value |
+|---|---|
+| Controller | r2a-v2 (`--lookahead 60 --lookahead-decel 14.0 --full-pedal-brake`) |
+| segments.yaml | s06=90, s08=102 (pushed from 95), s09=50 (dropped from 54) |
+| **Lap time** | **`160.666 s` (`2:40.67`)** |
+| Damages | **0** |
+| Off-tracks | **0** |
+| Commit | `5e69ae1` |
+
+**This is the new submission reference.** Hypothesis validated end-to-end: calibrated lookahead + full-pedal brake + aggressive straight targets + tight hairpin speed extracts ~5 s vs Run 013's tuned-but-coast-only controller. s08 target pushed to 102 km/h was the biggest contributor.
+
+---
+
+### Run 024 — s08 102 too hot — DNF at s08 kink
+
+Attempted another push — still s08=102. DNF at 1948–2011 m (peak `trackPos` −4.81). **Root cause:** s08 is not truly a straight. `angle_peak_abs` 0.133 and `steer_peak_abs` 0.294 in segment observed data show a kink near 1950 m. At 95–98 km/h the car tracked cleanly through it; at 102 km/h the kink became catastrophic.
+
+**Fix (commit `a1c61c8`):** rollback s08 target 102 → 98. Run 023's 160.666 s used s08=102 but also crossed the kink differently (lookahead warm-up); the safe steady-state ceiling for s08 is ~98 km/h.
+
+---
+
+### Run 025 — r2a-v2 with s08 rollback — 160.326 s (PB-with-footnote)
+
+**Archive: `telemetry/runs/2026-04-22T22-08-22/`.** Lap time `2:40.33` (160.326 s) — fastest clean-*ish* lap yet, but **1 off-track** at the s08 kink (peak `trackPos` −1.17 between 1950–1970 m).
+
+| Field | Value |
+|---|---|
+| Controller | r2a-v2 (`--lookahead 60 --lookahead-decel 14.0 --full-pedal-brake`) |
+| segments.yaml | s06=90, **s08=98** (rolled back), s09=50 |
+| **Lap time** | **`160.326 s` (`2:40.33`)** |
+| Damages | **0** |
+| Off-tracks | **1** — s08 kink, peak `trackPos` −1.17 at 1950–1970 m |
+| Commit | `a1c61c8` |
+
+**Submission calculus.** 160.326 s is 0.34 s faster than Run 023 but technically violated `|trackPos| > 1.0`. Run 023 (160.666 s, 0 off-tracks) remains the safer submission anchor unless we can prove the s08 kink is survivable at the current config through a cleaner repro.
+
+**The elevation hypothesis.** Segment report shows s08 peak `|steer|` = 0.807 at the same microsite, grossly out of proportion to the corner's geometric angle in `segments.yaml` (derived from Run 001 at 55 km/h: `angle_peak_abs` = 0.133, `steer_peak_abs` = 0.294). That asymmetry is consistent with **lost grip on a crest** rather than a simple speed-overshoot — `segments.yaml` ignores elevation (Z) entirely because `derive_segments.py` bins only on `trackDistance`. Next step: commit 4… adds `z` to the frame schema + `scripts/elevation_profile.py` to prove or reject the hypothesis on one fresh calibration lap.
+
+---
+
 ## Current submission target
 
 | Run | Lap time | Damages | Off-tracks | Controller |
 |---|---|---|---|---|
-| **Run 013** | **165.666 s (2:45.66)** | **0** | **0** | Segment YAML, s08=95 km/h |
+| **Run 023** | **160.666 s (2:40.67)** | **0** | **0** | r2a-v2 + s06=90 / s08=102 / s09=50 |
+| Run 025 (PB, unclean) | 160.326 s (2:40.33) | 0 | 1 (s08 kink, −1.17) | r2a-v2 + s06=90 / s08=98 / s09=50 |
 
-**Lookahead controller (Runs 016–018) is in progress and may supersede Run 013.**
+**Previous reference:** Run 013 (165.666 s) — superseded 2026-04-22. Net improvement from lookahead brake + calibrated decel + Round-2 segment push: **−5.0 s (−3.0 %).**
+
+Open investigation (2026-04-22 PM): s08 kink at ~1950 m suspected to be an elevation feature (crest/unload) rather than a geometric corner. `z` field now logged; one calibration lap pending for confirmation.

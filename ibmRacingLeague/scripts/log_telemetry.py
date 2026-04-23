@@ -141,6 +141,7 @@ def _map_sensors_to_frame(sensors: dict[str, Any]) -> dict[str, Any]:
         "rpm": _as_int(sensors.get("rpm")),
         "trackPosition": _as_float(sensors.get("trackPos")),
         "trackDistance": _as_float(sensors.get("distFromStart")),
+        "z": _as_float(sensors.get("z")),
         "opponentMinDistance": _opponent_min(sensors.get("opponents")),
         "angle_to_track_axis": _as_float(sensors.get("angle")),
         "damage": _as_float(sensors.get("damage")),
