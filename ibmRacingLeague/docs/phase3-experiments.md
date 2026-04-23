@@ -2,6 +2,8 @@
 
 Running log of controller-tuning experiments on Corkscrew with `src/driver_baseline.py`. Each entry is a single-variable change from the previous anchor run, the hypothesis behind it, the measured outcome, and the decision to accept or reject.
 
+> **Theory reference:** see [`docs/racing-methodology.md`](./racing-methodology.md) for the physics (traction circle, weight transfer, trail braking, late apex) and TORCS-specific equations (Ahura target-speed formula, pedal mapping, ABS/ASR) that these experiments are testing against.
+
 **Anchor runs** (for A/B comparisons):
 - **Baseline (clean):** Run 006, 55 km/h everywhere, `212.986 s`, damages 0, off-tracks 0.
 - **Clean fast:** Run 008, `--target-speed 80 --slow-zone 2366:2596:50 --slow-zone 3170:3434:50`, `175.106 s`, damages 0, off-tracks 0. **← current reference for Phase 3 tuning.**
@@ -389,5 +391,7 @@ DNF at 1948–2011 m with peak `trackPos` −4.81. Three excursions clustered at
 **Test:** added `z` to the frame schema (`scripts/log_telemetry.py`) and `scripts/elevation_profile.py` which bins Z vs `trackDistance` and correlates high-grip-pressure events with elevation. One calibration lap on any clean strategy will either confirm a crest near 1950 m (hypothesis verified) or show a flat profile (hypothesis rejected).
 
 **If confirmed:** the fix is to cap s08 speed to ~92 km/h in a narrow 1900:2000 micro-zone, independent of the surrounding straight target. That should allow s06/s08 open targets to push higher (>100 km/h) elsewhere without the kink being the binding constraint.
+
+See [`docs/racing-methodology.md`](./racing-methodology.md) §5 for the two competing failure-mode explanations (pure traction-circle saturation vs weight-transfer grip loss over a crest) and the decisive experiment that distinguishes them.
 
 **If rejected:** the kink is geometric; `segments.yaml` needs a hand-placed micro-corner at 1900:2000 and `derive_segments.py` needs a lower `corner_steer_abs` threshold or a bin on second derivative of heading.
