@@ -1,8 +1,10 @@
 # Roadmap & Phase Tracker
 
-> Target: **2026-07-01** submission deadline. Today: 2026-04-21. Budget: ~10 weeks.
+> Target: **2026-07-01** submission deadline. Today: 2026-04-23. Budget: ~10 weeks.
 >
-> **Plan revision 2 (2026-04-20): "Aggressive pull-forward."** Zo-side Phase 1 finished 6 days early. We're spending the lead on a parallel solo-code track that starts now, pulling Phase 2 forward by 4 days and accruing ~3 days of buffer into Phase 4. See "Velocity buffer" below.
+> **Current submission anchor:** Run 023 (commit `52252ea`) — `160.666 s` (`2:40.67`), damages 0, off-tracks 0. **−24.5% vs canonical baseline Run 006** (`212.986 s`). See `telemetry/baseline.md` and `docs/phase3-experiments.md` for the full progression.
+>
+> **Methodology reference:** [`docs/racing-methodology.md`](./racing-methodology.md) consolidates racing physics (GT2) + TORCS equations (Ahura) + RL insights (TORCS-Keras) into a single reference that each experiment tests against.
 
 Legend: ✅ done · 🔄 in progress · ⬜ not started · ⚠️ blocked
 
@@ -30,9 +32,9 @@ Teammate-independent work that can happen before Phase 2 starts:
 - ✅ Implement `scripts/validate_run.py` — full impl against `telemetry/SCHEMA.md` v0.2 (2026-04-20)
 - ✅ Unit tests for `validate_run.py` using synthetic fixture runs — `tests/test_validate_run.py` (20 tests, all passing)
 - ✅ Corkscrew track-segment map draft — `telemetry/segments.txt` (18 IDs, Phase 3 will tune against track reference data)
-- ⬜ Skeleton `scripts/run_race.py` with `--help` and TODO blocks
-- ⬜ Skeleton `scripts/label_segments.py` with `--help` and TODO blocks
-- ⬜ Skeleton `scripts/ab_run.py` with `--help` and TODO blocks
+- ❌ ~~Skeleton `scripts/run_race.py`~~ — **dropped 2026-04-22**, two-PowerShell manual launch is faster than orchestration for a solo 1-lap regime
+- ❌ ~~Skeleton `scripts/label_segments.py`~~ — **superseded 2026-04-22** by `telemetry/segments.yaml` + `scripts/segment_tagger.py` (Run 001 derivation)
+- ❌ ~~Skeleton `scripts/ab_run.py`~~ — **dropped 2026-04-22**, manual single-variable A/B against Run 008/Run 023 anchors works cleanly
 - ⬜ Draft `docs/phase1-kickoff.md` — agenda for Apr 27 team sync (strategy walk-through + SCHEMA overview)
 
 **Exit:** code scaffolding is waiting for teammates on Day 1 of Phase 2.
@@ -70,25 +72,34 @@ The IBM bundle uses the **Simulated Car Racing (SCR) architecture**: TORCS ships
 - ✅ **Day 1 smoke test:** ran `python snakeoil3_gym.py` against a live `scr_server` race on Corkscrew — full Python→UDP→TORCS loop verified end-to-end (2026-04-21 AM). Demo controller drives poorly but that's expected; screenshot archived in `docs/screenshots/`.
 - ✅ Implement `src/driver_baseline.py` as a `snakeoil3` subclass — completes a clean Corkscrew lap (2026-04-21 PM). Finishing **P1** with lap time **`3:32.92`**, damages **0**, top speed 65 km/h. `trackPos` stayed in `[-0.66, +0.66]` (never left the track). Canonical SCR steering `(angle - trackPos*0.5) / STEER_LOCK` + off-track recovery mode. Commits: `d9aeb4f`, `7091c72`, `379c7bb`. Evidence: `docs/screenshots/2026-04-21_phase2-day1-p1-finish.png`. Full run data: `telemetry/baseline.md`.
 - ✅ Extended telemetry logger (SCHEMA v0.2 fields) — `scripts/log_telemetry.py` rewritten as importable `TelemetryLogger` library. Writes `frames.ndjson` + `manifest.json` per run; driver integrates via `--no-log`/`--run-dir`/`--notes`. 8 unit tests in `tests/test_log_telemetry.py`, all passing. Commits: `2d116fe`, `df41e63`, `487c6de`. (2026-04-22)
-- ⬜ Wire `scripts/run_race.py` full impl — orchestrates both `wtorcs.exe` + Python client, handles the two-process startup *(deferred — not on the lap-time critical path; two PowerShell windows work fine for now)*
+- ❌ ~~Wire `scripts/run_race.py` full impl~~ — **dropped 2026-04-22**; two-PowerShell manual launch remains the canonical regime
 - ❌ ~~Test harness: 5-lap average, same start conditions — `scripts/run_race.py --laps 5`~~ — **dropped 2026-04-22.** Competition judges a *single standing-start lap* (submission form field #6 verbatim: `"Standing start lap time - used to determine who qualifies"`). A 5-lap mean would tune the controller to rolling-start dynamics, not standing-start. 1-lap Quick Race stays the canonical regime. Cross-run determinism of 0.144 s (4 runs, Run 002 entry) means single-run A/B deltas are already trustworthy to ~0.1 s.
-- ⬜ **Verify IBM F1 car is what `scr_server` selects on race start** — submission form says `"Once your Corkscrew time trial is complete with the IBM F1 car"`. The Quick Start bundle *probably* configures this but we haven't confirmed. Action: inspect TORCS car-selection UI or `scr_server` robot config file; cross-reference with the IBM Box reference library.
+- ✅ **IBM F1 car confirmed** (2026-04-22) — brake-calibration telemetry measured 22 m/s² mean / 25 m/s² peak decel; these numbers match the F1 spec sheet from the IBM Box reference library, not the Quick Start trb1. `scr_server` selects IBM F1 by default on Corkscrew.
 - ✅ Every run archive must pass `scripts/validate_run.py` before commit — enforced from Run 006 onward. Run 005 attempt caught a real schema violation (post-race frames logged after `curLapTime` reset), fixed in commit `487c6de`.
 - ✅ Record baseline lap time in `telemetry/baseline.md` — Run 001 (scoreboard) + Run 002 (driver log, 2026-04-22 AM) archived. Cross-run determinism verified: 4 runs, 0.144 s spread (0.068%). Commit `9e1d1c3`.
 - ✅ Fix `driver_baseline.py` race-end detection + per-lap logging — commits `7fcfab3`, `1d2b003`, `9e1d1c3`. Loop now exits at ~10,700 steps via stale-`curLapTime` detection (400 consecutive frozen ticks) instead of 99,999. Three-path lap capture: `lastLapTime` (primary) → `curLapTime` reset (fallback) → final-on-race-end (catches single-lap races where scr_server stops mid-lap). All three paths deduped against a 1-second tolerance.
-- ⬜ Daily commits to `main`
+- ✅ Daily commits to `main` — 20+ commits 2026-04-21 through 2026-04-23, all pushed
 
-## Phase 3 — Performance tuning (May 15 – June 4) — *pulled forward 3 days; rubric gate HIT 2026-04-22*
+## Phase 3 — Performance tuning (May 15 – June 4) — *pulled forward; rubric gate cleared 2026-04-22*
 
-- 🔄 **Rubric target `≤3:00.98` HIT on 2026-04-22 via Run 007** — `--target-speed 80` (one flag change) → lap `2:50.57` (`170.566 s`), **−19.9% vs canonical baseline** (Run 006 `212.986 s`). But: 41 damages, 2 off-tracks including one severe `trackPos=-3.77` spin. Clean-lap headroom remains. Evidence: `docs/screenshots/2026-04-22_phase3-day1-run007-target80-2-50-57.png`. Archive: `telemetry/runs/2026-04-21T21-09-16/`. Now re-framing Phase 3 goal as "push deeper while eliminating off-tracks and damages" rather than "hit the gate."
-- ✅ **Path A validated — Run 008 clean baseline (2026-04-22)** — `--target-speed 80 --slow-zone 3170:3434:50 --slow-zone 2366:2596:50` → lap `2:55.11` (`175.106 s`), **damages 0, off-tracks 0**, validator PASS, 8,812 frames. Hypothesis confirmed: slowing the two problem corners to 50 km/h cost only +4.540 s vs Run 007's dirty lap while eliminating every damage point. **Run 008 is now the canonical clean reference** for Phase 3 A/B tuning — Run 007's 170.566 s is faster on paper but unsafe under judging. Evidence: `docs/screenshots/2026-04-22_run008-path-a-clean-lap.png`. Archive: `telemetry/runs/2026-04-21T22-28-24/`. Commit: `7690afc`.
-- 🔄 **Run 009 designed (2026-04-22) — narrow-zone experiment.** Margin analysis of Run 008 shows peak `|trackPos|` inside slow zones is 0.68 (0.32 of headroom before the 1.0 safety floor). Zones are ~10× wider than the actual corners (17–24 m real corner, 230–264 m zoned). Run 009 shrinks padding from ±100 m to ±60 m → zones `2420:2540:50` and `3220:3320:50` — 274 m of track moved from 50 → 80 km/h. Target: `~173.06 s`, damages 0. Full plan and zone math in `docs/phase3-experiments.md`.
-- ⬜ Segment-by-segment Corkscrew map — finalize from Phase 1 Track A draft (now **required** before Path A slow-zone experiments can become general)
-- ⬜ PID or lookup-table controller tuned per segment — Run 007 proved P-only steering wobbles at 80 km/h; PD/racing-line becomes the next-priority deliverable if Path B (push to 100) crashes
-- ⬜ Wire `scripts/label_segments.py` and `scripts/ab_run.py` full impls
-- ⬜ Granite-assisted code review (chat mode) — capture suggestions in `docs/granite-suggestions.md`. Run 006 + Run 007 archives are now concrete inputs to feed it.
-- ⬜ A/B test every change against baseline; only keep improvements; maintain `telemetry/leaderboard.md`
-- ⬜ **Stretch target: lap `≤2:30` with zero damages** — clean-run equivalent of Run 007 + segment-aware speed table. Original rubric gate already cleared; stretch = actually winning the competition, not just qualifying.
+See [`docs/phase3-experiments.md`](./phase3-experiments.md) for the full iteration log (Runs 006–025).
+
+- ✅ **Rubric gate `≤3:00.98` cleared 2026-04-22** (Run 007 `170.566 s` dirty, then Run 008 `175.106 s` clean).
+- ✅ **Canonical clean reference** — Run 008 `175.106 s`, damages 0, off-tracks 0 (commit `7690afc`).
+- ✅ **Segment-based driver shipped** — `src/driver_baseline.py` consumes `telemetry/segments.yaml` for per-segment speed targets. 16 segments derived from Run 001 telemetry (`bin=5.0m`). Commits `447a5c3` through `52252ea`.
+- ✅ **Lookahead brake controller** — `brake_dist = (v² − v_target²) / (2 · decel)` using measured decel ceiling. Replaces naive threshold braking.
+- ✅ **Brake calibration sprint (2026-04-22)** — measured real decel: **22 m/s² mean / 25 m/s² peak** on IBM F1 (commit `b878a51`). Calibration mode + analyzer in `scripts/`. Previous guess of 14 m/s² was ~35% conservative.
+- ✅ **Round 2 strategies shipped (2026-04-22, commits `52252ea`, `c4c3a0e`):**
+  - r2a: 60 m buffer, 14 m/s² decel (conservative)
+  - **r2a-v2: 60 m + `--full-pedal-brake`** — **Run 023 PB `160.666 s`, damages 0, off-tracks 0** ← current submission anchor
+  - r2b: 45 m, 18 m/s² (mid)
+  - r2c: 30 m, 21 m/s² (aggressive)
+- 🔄 **Open investigation — s08 elevation hypothesis** — kink at ~1950 m causes off-tracks at 102 km/h despite mild geometry. `z` field added to telemetry schema; `scripts/elevation_profile.py` ships. One calibration lap distinguishes pure-traction-saturation vs weight-transfer-grip-loss. See `docs/phase3-experiments.md` §Open investigation and `docs/racing-methodology.md` §5.
+- ❌ ~~PID steering~~ — **dropped 2026-04-22**. P-only steering held trackPos within bounds through Run 023; complexity not justified.
+- ❌ ~~`scripts/label_segments.py` + `ab_run.py`~~ — superseded by `telemetry/segments.yaml` derivation + manual A/B against Run 008/Run 023 anchors.
+- ❌ ~~`telemetry/leaderboard.md`~~ — merged into `telemetry/baseline.md` progression tables.
+- ⬜ Granite-assisted code review (chat mode) — `docs/granite-suggestions.md`. Run 023 archive + `segments.yaml` are now concrete inputs.
+- ⬜ **Stretch target: `≤2:30` with zero damages** — current PB `2:40.67` leaves ~10.7 s on the table. Next gains plausibly come from: (a) resolving s08 kink → unlock s06/s08 >100 km/h; (b) trail-braking replacement for `--full-pedal-brake`; (c) late-apex line for s09/s13. All three documented in `docs/racing-methodology.md` §5.
 
 ## Phase 4 — Polish & differentiate (June 5 – June 21) — *starts 3 days earlier, ends same date = +3-day buffer*
 
@@ -126,7 +137,10 @@ Tracks how far ahead (+) or behind (−) the original plan we are. Update whenev
 | 2026-04-22 AM (submission format resolved) | **+9 days (held, small debit)** | Walked the live submission form at `https://forms.office.com/r/gD0gMZaTwP`. Field #6 verbatim: `"Standing start lap time - used to determine who qualifies"` — confirms competition is a **single standing-start lap** on Corkscrew with the **IBM F1 car**. Dropped 5-lap harness item (would have tuned to rolling-start dynamics, wrong regime). Added 3 previously-unscoped deliverables: (a) IBM F1 car verification in TORCS, (b) bespoke livery with uni + team ID, (c) SkillsBuild badges presentation deck. Net: minor scope addition (~3–4h), no schedule impact since 1-lap setup is what we already built. |
 | 2026-04-22 (SCHEMA v0.2 logger shipped) | **+9 → +12 days** | `TelemetryLogger` library + driver integration + 8 unit tests landed; Run 006 archive is the first canonical v0.2 reference (10,706 frames, validator PASS). Phase 2 main deliverable "extended telemetry logger" was originally sized for May 4–14; shipped on Apr 22, banking ~3 more days into Phase 4. Commits: `2d116fe`, `df41e63`, `487c6de`, `1fbac08`. |
 | 2026-04-22 (Phase 3 rubric gate HIT) | **+12 → +26 days** | Run 007 (`--target-speed 80`, commit `0822c99`) lapped `2:50.57` vs `3:32.99` baseline (−19.9%). Phase 3's `≤3:00.98` gate was scheduled for May 15 – June 4; cleared it on Apr 22. That's ~2 weeks of Phase 3 banked up-front. Does *not* mean Phase 3 is done: 41 damages and a `trackPos=-3.77` spin say we're past the P-only steering's stability margin. Remaining Phase 3 work is now "push faster while cleaning up off-tracks," not "qualify." Evidence: `docs/screenshots/2026-04-22_phase3-day1-run007-target80-2-50-57.png`. |
-| 2026-04-22 (Path A clean baseline shipped) | **+26 days (held)** | Run 008 (`--target-speed 80` + two slow zones, commit `447a5c3`) lapped `2:55.11` (`175.106 s`) with **damages 0 and off-tracks 0** — the first *legal, repeatable* sub-3:00 reference. Cost over Run 007's dirty fast lap: only +4.540 s. Rubric gate `≤180.98` now cleared cleanly (vs Run 007's dirty-but-faster proof-of-concept). A/B comparisons for PD steering, segment-aware speeds, and Path B stretch now anchor on Run 008, not Run 007. Commit: `7690afc`. Evidence: `docs/screenshots/2026-04-22_run008-path-a-clean-lap.png`. |
+| 2026-04-22 (Path A clean baseline shipped) | **+26 days (held)** | Run 008 (`--target-speed 80` + two slow zones, commit `447a5c3`) lapped `2:55.11` (`175.106 s`) with **damages 0 and off-tracks 0** — the first *legal, repeatable* sub-3:00 reference. Cost over Run 007's dirty fast lap: only +4.540 s. Rubric gate `≤180.98` now cleared cleanly (vs Run 007's dirty-but-faster proof-of-concept). Commit: `7690afc`. |
+| 2026-04-22 PM (segment driver + brake calibration) | **+26 days (held)** | Runs 009–015 tightened zone padding and wired `telemetry/segments.yaml` into the driver. Runs 016–018 introduced the lookahead brake controller. Brake calibration sprint (commit `b878a51`) measured real decel: **22 m/s² mean, 25 m/s² peak** — prior 14 m/s² guess was ~35% conservative, unlocking aggressive Round 2. |
+| 2026-04-22 PM (Round 2 + PB `2:40.67`) | **+26 → +30 days** | Round 2 lookahead strategies r2a/r2b/r2c shipped (commit `52252ea`); r2a-v2 with `--full-pedal-brake` (commit `c4c3a0e`) set PB **Run 023 `160.666 s` damages 0 off-tracks 0** — `−24.5%` vs baseline. Run 025 clocked `160.326 s` but with 1 off-track at s08 kink, so Run 023 is the safe submission anchor. |
+| 2026-04-23 (elevation hypothesis + methodology docs) | **+30 days (held)** | Added `z` field to telemetry schema (commit `4649b71`) + `scripts/elevation_profile.py` analyzer to test whether s08 kink is a weight-transfer crest or pure traction-circle saturation. Shipped `docs/racing-methodology.md` (commit `5f1d2a6`) synthesizing GT2 physics + Ahura TORCS equations + TORCS-Keras RL insights as the reference framework for remaining tuning. |
 | — | — | — |
 
 **Escalation rule:** if buffer drops below **+0 days** (on-schedule or behind) at any phase boundary, pause and replan. Do not compress by cutting scope without team discussion.
