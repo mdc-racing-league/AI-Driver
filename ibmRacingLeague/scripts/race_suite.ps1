@@ -66,6 +66,24 @@ $strategies = @(
         name        = "Brake Calibration"
         description = "Accelerate to 100 km/h then floor brake -- measures actual decel"
         driverArgs  = "--brake-test 100"
+    },
+    [PSCustomObject]@{
+        id          = "r2a-conservative"
+        name        = "Round-2A Conservative (decel 14)"
+        description = "Lookahead 60m / decel 14 -- accounts for cornering grip loss"
+        driverArgs  = "--segments telemetry\segments.yaml --lookahead 60 --lookahead-decel 14.0"
+    },
+    [PSCustomObject]@{
+        id          = "r2b-real"
+        name        = "Round-2B Real (decel 18)"
+        description = "Lookahead 40m / decel 18 -- trust measured 22 m/s^2 with cornering margin"
+        driverArgs  = "--segments telemetry\segments.yaml --lookahead 40 --lookahead-decel 18.0"
+    },
+    [PSCustomObject]@{
+        id          = "r2c-aggressive"
+        name        = "Round-2C Aggressive (decel 21)"
+        description = "Lookahead 30m / decel 21 -- peak * 0.85, latest possible braking"
+        driverArgs  = "--segments telemetry\segments.yaml --lookahead 30 --lookahead-decel 21.0"
     }
 )
 
