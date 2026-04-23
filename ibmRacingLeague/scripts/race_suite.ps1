@@ -1,9 +1,10 @@
-# race_suite.ps1 — full experiment suite runner
+# race_suite.ps1 -- full experiment suite runner
 #
 # Usage (from repo root):
-#   .\scripts\race_suite.ps1                    # run all 6 strategies in order
-#   .\scripts\race_suite.ps1 -Only flat-out     # run just one strategy by id
-#   .\scripts\race_suite.ps1 -List              # print strategy list and exit
+#   .\scripts\race_suite.ps1                       # run all 6 strategies in order
+#   .\scripts\race_suite.ps1 -Only flat-out        # run just one strategy by id
+#   .\scripts\race_suite.ps1 -Strategy run016      # alias for -Only
+#   .\scripts\race_suite.ps1 -List                 # print strategy list and exit
 #
 # TORCS must be running in a separate window with:
 #   scr_server 1 / Corkscrew / 1 lap / New Race
@@ -11,10 +12,14 @@
 
 param(
     [string]$Only = "",
+    [string]$Strategy = "",
     [switch]$List
 )
 
 $ErrorActionPreference = "Stop"
+
+# Accept -Strategy as an alias for -Only
+if ($Strategy -ne "" -and $Only -eq "") { $Only = $Strategy }
 
 # ---------------------------------------------------------------------------
 # Strategy table
@@ -23,19 +28,19 @@ $strategies = @(
     [PSCustomObject]@{
         id          = "run016"
         name        = "Lookahead-200 Conservative"
-        description = "Full throttle, brakes 200m before corners at 7 m/s²"
+        description = "Full throttle, brakes 200m before corners at 7 m/s^2"
         driverArgs  = "--segments telemetry\segments.yaml --lookahead 200 --lookahead-decel 7.0"
     },
     [PSCustomObject]@{
         id          = "run017"
         name        = "Lookahead-150 Moderate"
-        description = "Full throttle, brakes 150m at 9 m/s²"
+        description = "Full throttle, brakes 150m at 9 m/s^2"
         driverArgs  = "--segments telemetry\segments.yaml --lookahead 150 --lookahead-decel 9.0"
     },
     [PSCustomObject]@{
         id          = "run018"
         name        = "Lookahead-120 Aggressive"
-        description = "Full throttle, brakes 120m at 11 m/s²"
+        description = "Full throttle, brakes 120m at 11 m/s^2"
         driverArgs  = "--segments telemetry\segments.yaml --lookahead 120 --lookahead-decel 11.0"
     },
     [PSCustomObject]@{
@@ -64,7 +69,7 @@ $strategies = @(
 if ($List) {
     Write-Host ""
     Write-Host "========================================" -ForegroundColor Cyan
-    Write-Host "  RACE SUITE — STRATEGY LIST" -ForegroundColor Cyan
+    Write-Host "  RACE SUITE -- STRATEGY LIST" -ForegroundColor Cyan
     Write-Host "========================================" -ForegroundColor Cyan
     Write-Host ""
     $i = 1
@@ -129,13 +134,14 @@ function Write-Checklist {
     Write-Host "     Take the TORCS Race Results screenshot now." -ForegroundColor Gray
     Write-Host "     Save it to Downloads. Note the filename." -ForegroundColor Gray
     Write-Host ""
-    Write-Host "  2. COMMIT & PUSH" -ForegroundColor White
+    Write-Host "  2. COMMIT and PUSH" -ForegroundColor White
     Write-Host "     Run these commands (replace screenshot filename):" -ForegroundColor Gray
     Write-Host ""
     Write-Host "     git add telemetry\runs\$runFolder" -ForegroundColor Yellow
     Write-Host "     # After screenshot: copy it to docs\screenshots\ then:" -ForegroundColor Gray
     Write-Host "     git add docs\screenshots\<screenshot-filename>" -ForegroundColor Yellow
-    Write-Host ("     git commit -m `"telemetry: $runFolder — $strategyLabel — <lap-time> <damages>`"") -ForegroundColor Yellow
+    $msg = '     git commit -m "telemetry: ' + $runFolder + ' - ' + $strategyLabel + ' - <lap-time> <damages>"'
+    Write-Host $msg -ForegroundColor Yellow
     Write-Host "     git push" -ForegroundColor Yellow
     Write-Host ""
     Write-Host "  3. RESTART TORCS for next run" -ForegroundColor White
@@ -151,7 +157,7 @@ function Write-Checklist {
 # ---------------------------------------------------------------------------
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  RACE SUITE — $total strategies queued" -ForegroundColor Cyan
+Write-Host "  RACE SUITE -- $total strategies queued" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -171,7 +177,7 @@ foreach ($s in $run_strategies) {
     Write-Host "    2. Race -> Quick Race -> Corkscrew" -ForegroundColor Gray
     Write-Host "    3. Add scr_server 1 as the only driver" -ForegroundColor Gray
     Write-Host "    4. Set laps = 1" -ForegroundColor Gray
-    Write-Host "    5. Click New Race — wait for 'Not Responding' (waiting for driver)" -ForegroundColor Gray
+    Write-Host "    5. Click New Race -- wait for 'Not Responding' (waiting for driver)" -ForegroundColor Gray
     Write-Host ""
 
     Read-Host "  TORCS ready? Press ENTER to launch driver (Ctrl+C to abort suite)"
@@ -237,9 +243,9 @@ foreach ($s in $strategies) {
         Write-Host ("  {0,-30} | {1,-28} | {2}" -f $entry.Strategy, $entry.RunFolder, $entry.Status)
     } elseif ($Only -eq "" -or $Only -eq $s.id) {
         # Was supposed to run but didn't (Ctrl+C)
-        Write-Host ("  {0,-30} | {1,-28} | {2}" -f "$($s.id) $($s.name)", "(interrupted)", "—")
+        Write-Host ("  {0,-30} | {1,-28} | {2}" -f "$($s.id) $($s.name)", "(interrupted)", "-")
     } else {
-        Write-Host ("  {0,-30} | {1,-28} | {2}" -f "$($s.id) $($s.name)", "(skipped)", "—") -ForegroundColor DarkGray
+        Write-Host ("  {0,-30} | {1,-28} | {2}" -f "$($s.id) $($s.name)", "(skipped)", "-") -ForegroundColor DarkGray
     }
 }
 

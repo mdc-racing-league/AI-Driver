@@ -1,4 +1,4 @@
-# post_lap.ps1 — standardized post-lap analysis
+# post_lap.ps1 -- standardized post-lap analysis
 # Usage: .\scripts\post_lap.ps1
 # Run from repo root after every lap.
 
@@ -10,7 +10,7 @@ if (-not $run) { Write-Error "No run archives found."; exit 1 }
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  POST-LAP ANALYSIS — $run" -ForegroundColor Cyan
+Write-Host "  POST-LAP ANALYSIS -- $run" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 
 # 1. Validate
@@ -35,13 +35,14 @@ Write-Host "  1. SCREENSHOT" -ForegroundColor White
 Write-Host "     Take the TORCS Race Results screenshot now." -ForegroundColor Gray
 Write-Host "     Save it to Downloads. Note the filename." -ForegroundColor Gray
 Write-Host ""
-Write-Host "  2. COMMIT & PUSH" -ForegroundColor White
+Write-Host "  2. COMMIT and PUSH" -ForegroundColor White
 Write-Host "     Run these commands (replace screenshot filename):" -ForegroundColor Gray
 Write-Host ""
 Write-Host "     git add telemetry\runs\$run" -ForegroundColor Yellow
 Write-Host "     # After screenshot: copy it to docs\screenshots\ then:" -ForegroundColor Gray
 Write-Host "     git add docs\screenshots\<screenshot-filename>" -ForegroundColor Yellow
-Write-Host "     git commit -m `"telemetry: $run — <lap-time> <damages>`"" -ForegroundColor Yellow
+$msg = '     git commit -m "telemetry: ' + $run + ' - <lap-time> <damages>"'
+Write-Host $msg -ForegroundColor Yellow
 Write-Host "     git push" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "  3. RESTART TORCS for next run" -ForegroundColor White

@@ -1,4 +1,4 @@
-# run_experiment.ps1  —  launch a named experiment config, then run analysis.
+# run_experiment.ps1  --  launch a named experiment config, then run analysis.
 #
 # Usage (Window B, from repo root):
 #   cd $env:USERPROFILE\ibmRacingLeague\ibmRacingLeague
@@ -7,13 +7,13 @@
 # TORCS must already be running in Window A with scr_server 1 / Corkscrew / 1 lap / New Race.
 #
 # Defined experiment IDs:
-#   016           — lookahead 200m / decel 7.0  (conservative: proves lookahead works)
-#   017           — lookahead 150m / decel 9.0  (moderate: tighter brake points)
-#   018           — lookahead 120m / decel 11.0 (aggressive: late braking)
-#   013r          — reproduce Run 013 exactly   (regression check)
-#   flat-out      — straights uncapped at 130 km/h, lookahead 150m/9.0
-#   push-straights— s08@110, s06/s10/s12@100, lookahead 150m/9.0
-#   regression    — Run-013 regression check (alias for 013r with suite naming)
+#   016            -- lookahead 200m / decel 7.0  (conservative: proves lookahead works)
+#   017            -- lookahead 150m / decel 9.0  (moderate: tighter brake points)
+#   018            -- lookahead 120m / decel 11.0 (aggressive: late braking)
+#   013r           -- reproduce Run 013 exactly   (regression check)
+#   flat-out       -- straights uncapped at 130 km/h, lookahead 150m/9.0
+#   push-straights -- s08@110, s06/s10/s12@100, lookahead 150m/9.0
+#   regression     -- Run-013 regression check (alias for 013r with suite naming)
 
 param(
     [Parameter(Mandatory=$true)]
