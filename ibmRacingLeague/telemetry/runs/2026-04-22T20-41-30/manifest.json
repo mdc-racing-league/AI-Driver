@@ -1,0 +1,27 @@
+{
+  "run_id": "c8bd181e-ca0c-467c-af71-3efcd5fb6b8a",
+  "schema_version": "v0.2",
+  "started_at": "2026-04-22T20:41:30-04:00",
+  "ended_at": "2026-04-22T20:46:49-04:00",
+  "controller_type": "baseline",
+  "controller_variant_id": "d164ca5",
+  "frame_count": 15482,
+  "segment_ids_seen": [
+    "s00_start_straight"
+  ],
+  "outcome": {
+    "completed": false,
+    "crashed": false,
+    "laps_completed": 0,
+    "best_lap_seconds": null,
+    "total_time_seconds": null,
+    "final_damage": 107.0,
+    "stop_reason": "KeyboardInterrupt",
+    "steps": 15482
+  },
+  "track": "corkscrew",
+  "car": "unknown",
+  "driver": "louis",
+  "weather": "clear",
+  "notes": "push-straights - Push Straights (110 km/h)"
+}
