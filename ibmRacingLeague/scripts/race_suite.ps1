@@ -84,6 +84,12 @@ $strategies = @(
         name        = "Round-2C Aggressive (decel 21)"
         description = "Lookahead 30m / decel 21 -- peak * 0.85, latest possible braking"
         driverArgs  = "--segments telemetry\segments.yaml --lookahead 30 --lookahead-decel 21.0"
+    },
+    [PSCustomObject]@{
+        id          = "r2a-v2"
+        name        = "Round-2A v2 (decel 14 + full pedal)"
+        description = "Lookahead 60m / decel 14 / brake pedal forced to 1.0 in zone"
+        driverArgs  = "--segments telemetry\segments.yaml --lookahead 60 --lookahead-decel 14.0 --full-pedal-brake"
     }
 )
 

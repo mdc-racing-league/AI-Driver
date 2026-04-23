@@ -73,6 +73,7 @@ SEGMENTS: list[tuple[float, float, float]] = []
 # Populated from --lookahead and --lookahead-decel CLI flags.
 LOOKAHEAD_M: float = 0.0          # 0 = disabled
 LOOKAHEAD_DECEL_MS2: float = 8.0  # assumed deceleration in m/s²
+FULL_PEDAL_BRAKE: bool = False    # if True, any nonzero brake → pedal = 1.0
 KMH_TO_MS: float = 1000.0 / 3600.0
 
 # Brake calibration test parameters.
@@ -178,6 +179,8 @@ def _lookahead_brake(dist_m: float, speed_kmh: float) -> float:
             b = min(0.9, 0.3 + overshoot_ratio * 0.6)
             max_brake = max(max_brake, b)
 
+    if FULL_PEDAL_BRAKE and max_brake > 0.0:
+        return 1.0
     return max_brake
 
 
@@ -331,6 +334,10 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
                         help="Brake calibration mode.  Accelerates to KMH then floors the brake "
                              "until the car stops.  Use analyze_brake_test.py on the resulting "
                              "run to compute peak / mean decel.  0 = disabled (default).")
+    parser.add_argument("--full-pedal-brake", action="store_true",
+                        help="In lookahead mode, force brake pedal = 1.0 whenever any brake is "
+                             "requested in the zone (kills the 0.3->0.9 ramp).  Use when the "
+                             "car can't shed enough speed before corner entry.")
     return parser.parse_args(argv)
 
 
@@ -402,19 +409,21 @@ def main(argv: list[str] | None = None) -> int:
 
     # drive() reads TARGET_SPEED_KMH at module scope, so override here when
     # --target-speed is passed. Keeps the experiment-sweep workflow one-line.
-    global TARGET_SPEED_KMH, SLOW_ZONES, SEGMENTS, LOOKAHEAD_M, LOOKAHEAD_DECEL_MS2, BRAKE_TEST_SPEED
+    global TARGET_SPEED_KMH, SLOW_ZONES, SEGMENTS, LOOKAHEAD_M, LOOKAHEAD_DECEL_MS2, BRAKE_TEST_SPEED, FULL_PEDAL_BRAKE
     TARGET_SPEED_KMH = args.target_speed
     SLOW_ZONES = _parse_slow_zones(args.slow_zone)
     SEGMENTS = _load_segments(args.segments) if args.segments else []
     LOOKAHEAD_M = args.lookahead
     LOOKAHEAD_DECEL_MS2 = args.lookahead_decel
     BRAKE_TEST_SPEED = args.brake_test
+    FULL_PEDAL_BRAKE = args.full_pedal_brake
 
     print(f"[driver_baseline] snakeoil3 path: {DEFAULT_GYM_TORCS_DIR}")
     if BRAKE_TEST_SPEED > 0:
         print(f"[driver_baseline] controller: BRAKE_TEST (target {BRAKE_TEST_SPEED:.0f} km/h then full brake)")
     elif LOOKAHEAD_M > 0:
-        print(f"[driver_baseline] controller: LOOKAHEAD (window={LOOKAHEAD_M:.0f}m, decel={LOOKAHEAD_DECEL_MS2:.1f} m/s^2)")
+        pedal_mode = "FULL_PEDAL" if FULL_PEDAL_BRAKE else "ramped"
+        print(f"[driver_baseline] controller: LOOKAHEAD (window={LOOKAHEAD_M:.0f}m, decel={LOOKAHEAD_DECEL_MS2:.1f} m/s^2, pedal={pedal_mode})")
     else:
         print(f"[driver_baseline] controller: baseline (target speed: {TARGET_SPEED_KMH} km/h)")
     if SEGMENTS:
