@@ -100,7 +100,7 @@ segments:
     kind: straight
     start_m: 1080.0
     end_m: 1480.0
-    target_speed_kmh: 80.0
+    target_speed_kmh: 90.0
     observed:
       len_m: 400.0
       speed_avg: 64.8
@@ -147,7 +147,7 @@ segments:
     kind: corner
     start_m: 2320.0
     end_m: 2540.0
-    target_speed_kmh: 58.0
+    target_speed_kmh: 54.0
     observed:
       len_m: 350.0
       speed_avg: 64.0
