@@ -1,8 +1,11 @@
-# Corkscrew segment map — Run B variant
+# Corkscrew segment map — Run B variant (post Run A elev gate)
 # Based on segments.yaml (2026-04-21T20-43-35 telemetry).
 # Change from base: s08_straight split into three sub-segments to add a
-# 40 m speed cap (92 km/h) at the kink (1930-1970 m). All other segments
-# are identical to segments.yaml.
+# 20 m speed cap (88 km/h) at the kink (1940-1960 m). Tightened from the
+# initial 92 km/h / 1930-1970 m plan after Run A elevation calibration
+# proved Corkscrew is FLAT (z varies <0.01 m across the whole lap), so
+# s08 is a geometric corner — needs a sharper turn-in cap.
+# All other segments are identical to segments.yaml.
 #
 # Schema version: v1
 
@@ -125,18 +128,18 @@ segments:
   - id: s08a_straight
     kind: straight
     start_m: 1600.0
-    end_m: 1930.0
+    end_m: 1940.0
     target_speed_kmh: 98.0
 
   - id: s08b_kink
     kind: corner
-    start_m: 1930.0
-    end_m: 1970.0
-    target_speed_kmh: 92.0
+    start_m: 1940.0
+    end_m: 1960.0
+    target_speed_kmh: 88.0
 
   - id: s08c_straight
     kind: straight
-    start_m: 1970.0
+    start_m: 1960.0
     end_m: 2320.0
     target_speed_kmh: 98.0
 
