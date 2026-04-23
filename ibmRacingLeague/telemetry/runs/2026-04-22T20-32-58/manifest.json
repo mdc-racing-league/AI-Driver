@@ -1,0 +1,27 @@
+{
+  "run_id": "1811b156-c27c-4ccd-a803-12f35b0565cc",
+  "schema_version": "v0.2",
+  "started_at": "2026-04-22T20:32:58-04:00",
+  "ended_at": "2026-04-22T20:38:11-04:00",
+  "controller_type": "baseline",
+  "controller_variant_id": "baca22a",
+  "frame_count": 14977,
+  "segment_ids_seen": [
+    "s00_start_straight"
+  ],
+  "outcome": {
+    "completed": false,
+    "crashed": false,
+    "laps_completed": 0,
+    "best_lap_seconds": null,
+    "total_time_seconds": null,
+    "final_damage": 37.0,
+    "stop_reason": "KeyboardInterrupt",
+    "steps": 14977
+  },
+  "track": "corkscrew",
+  "car": "unknown",
+  "driver": "louis",
+  "weather": "clear",
+  "notes": "flat-out - Flat Out (130 km/h + lookahead)"
+}
