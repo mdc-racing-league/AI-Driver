@@ -127,7 +127,7 @@ segments:
   - id: s08_straight
     kind: straight
     start_m: 1600.0
-    end_m: 2380.0
+    end_m: 2320.0
     target_speed_kmh: 95.0
     observed:
       len_m: 830.0
@@ -145,7 +145,7 @@ segments:
 
   - id: s09_turn_R_2605m
     kind: corner
-    start_m: 2380.0
+    start_m: 2320.0
     end_m: 2540.0
     target_speed_kmh: 58.0
     observed:
@@ -195,7 +195,7 @@ segments:
   - id: s12_straight
     kind: straight
     start_m: 3025.0
-    end_m: 3245.0
+    end_m: 3180.0
     target_speed_kmh: 80.0
     observed:
       len_m: 220.0
@@ -208,7 +208,7 @@ segments:
 
   - id: s13_turn_L_3272m
     kind: corner
-    start_m: 3245.0
+    start_m: 3180.0
     end_m: 3300.0
     target_speed_kmh: 58.0
     observed:
