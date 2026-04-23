@@ -60,6 +60,12 @@ $strategies = @(
         name        = "Run-013 Regression Check"
         description = "Reproduce Run 013 (165.666s) to verify nothing drifted"
         driverArgs  = "--segments telemetry\segments.yaml"
+    },
+    [PSCustomObject]@{
+        id          = "brake-test"
+        name        = "Brake Calibration"
+        description = "Accelerate to 100 km/h then floor brake -- measures actual decel"
+        driverArgs  = "--brake-test 100"
     }
 )
 
@@ -199,10 +205,15 @@ foreach ($s in $run_strategies) {
     Write-Host ""
     Write-Host "  Run folder detected: $runFolder" -ForegroundColor Cyan
 
-    # Post-lap analysis
+    # Post-lap analysis (special path for brake-test calibration)
     Write-Host ""
-    Write-Host "--- Post-lap analysis ---" -ForegroundColor Cyan
-    Invoke-PostAnalysis -runFolder $runFolder
+    if ($s.id -eq "brake-test") {
+        Write-Host "--- Brake calibration analysis ---" -ForegroundColor Cyan
+        python scripts\analyze_brake_test.py telemetry\runs\$runFolder
+    } else {
+        Write-Host "--- Post-lap analysis ---" -ForegroundColor Cyan
+        Invoke-PostAnalysis -runFolder $runFolder
+    }
 
     # Checklist
     Write-Checklist -runFolder $runFolder -strategyLabel "$($s.id) $($s.name)"

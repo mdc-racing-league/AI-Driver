@@ -75,6 +75,13 @@ LOOKAHEAD_M: float = 0.0          # 0 = disabled
 LOOKAHEAD_DECEL_MS2: float = 8.0  # assumed deceleration in m/s²
 KMH_TO_MS: float = 1000.0 / 3600.0
 
+# Brake calibration test parameters.
+# When BRAKE_TEST_SPEED > 0, the driver runs an open-loop "accelerate to N
+# km/h, then floor the brake" sequence so we can measure the car's actual
+# decel ceiling. Phase transitions are tracked in BRAKE_TEST_STATE.
+BRAKE_TEST_SPEED: float = 0.0     # 0 = disabled
+BRAKE_TEST_STATE = {"phase": "ACCEL"}
+
 
 def target_speed_for(state: dict) -> float:
     dist = float(state.get("distFromStart", state.get("distRaced", 0.0)) or 0.0)
@@ -219,6 +226,58 @@ def drive_lookahead(state: dict) -> dict:
     }
 
 
+def drive_brake_test(state: dict) -> dict:
+    """Open-loop brake calibration: accelerate to BRAKE_TEST_SPEED, then floor brake.
+
+    Phase ACCEL: full throttle, light steering to keep car straight on track.
+    Phase BRAKE: brake = 1.0, no throttle, no steering input.
+    Phase DONE : everything zero (car coasts/stops; we keep ticking so the
+                 telemetry frames continue logging until the script ends).
+    """
+    angle = float(state.get("angle", 0.0))
+    track_pos = float(state.get("trackPos", 0.0))
+    speed_x = float(state.get("speedX", 0.0))
+
+    phase = BRAKE_TEST_STATE["phase"]
+
+    if phase == "ACCEL" and speed_x >= BRAKE_TEST_SPEED:
+        BRAKE_TEST_STATE["phase"] = "BRAKE"
+        BRAKE_TEST_STATE["brake_start_speed"] = speed_x
+        phase = "BRAKE"
+        print(f"[brake_test] reached {speed_x:.1f} km/h -- BRAKE phase begins")
+
+    if phase == "BRAKE" and speed_x < 5.0:
+        BRAKE_TEST_STATE["phase"] = "DONE"
+        phase = "DONE"
+        print(f"[brake_test] car stopped (speed < 5) -- DONE")
+
+    if phase == "ACCEL":
+        steer = (angle - track_pos * TRACK_POS_BIAS) / STEER_LOCK
+        steer = max(-1.0, min(1.0, steer))
+        accel = 1.0
+        brake = 0.0
+    elif phase == "BRAKE":
+        steer = 0.0
+        accel = 0.0
+        brake = 1.0
+    else:  # DONE
+        steer = 0.0
+        accel = 0.0
+        brake = 0.0
+
+    gear = pick_gear(state)
+
+    return {
+        "steer": steer,
+        "accel": accel,
+        "brake": brake,
+        "gear": gear,
+        "clutch": 0.0,
+        "focus": [-90, -45, 0, 45, 90],
+        "meta": 0,
+    }
+
+
 def first_scalar(value):
     if isinstance(value, (list, tuple)) and value:
         return value[0]
@@ -226,6 +285,8 @@ def first_scalar(value):
 
 
 def _controller_reason(sensors: dict, action: dict) -> str:
+    if BRAKE_TEST_SPEED > 0:
+        return f"brake_test_{BRAKE_TEST_STATE['phase'].lower()}"
     if abs(float(sensors.get("trackPos", 0.0) or 0.0)) > 1.0:
         return "off_track_recovery"
     if float(action.get("brake", 0.0) or 0.0) > 0.0:
@@ -265,6 +326,11 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
                         help="Assumed deceleration in m/s² used to compute brake-point distance "
                              "(default: 8.0).  Increase if the car overshoots corners; "
                              "decrease if braking starts too early.")
+    parser.add_argument("--brake-test", type=float, default=0.0,
+                        metavar="KMH",
+                        help="Brake calibration mode.  Accelerates to KMH then floors the brake "
+                             "until the car stops.  Use analyze_brake_test.py on the resulting "
+                             "run to compute peak / mean decel.  0 = disabled (default).")
     return parser.parse_args(argv)
 
 
@@ -336,16 +402,19 @@ def main(argv: list[str] | None = None) -> int:
 
     # drive() reads TARGET_SPEED_KMH at module scope, so override here when
     # --target-speed is passed. Keeps the experiment-sweep workflow one-line.
-    global TARGET_SPEED_KMH, SLOW_ZONES, SEGMENTS, LOOKAHEAD_M, LOOKAHEAD_DECEL_MS2
+    global TARGET_SPEED_KMH, SLOW_ZONES, SEGMENTS, LOOKAHEAD_M, LOOKAHEAD_DECEL_MS2, BRAKE_TEST_SPEED
     TARGET_SPEED_KMH = args.target_speed
     SLOW_ZONES = _parse_slow_zones(args.slow_zone)
     SEGMENTS = _load_segments(args.segments) if args.segments else []
     LOOKAHEAD_M = args.lookahead
     LOOKAHEAD_DECEL_MS2 = args.lookahead_decel
+    BRAKE_TEST_SPEED = args.brake_test
 
     print(f"[driver_baseline] snakeoil3 path: {DEFAULT_GYM_TORCS_DIR}")
-    if LOOKAHEAD_M > 0:
-        print(f"[driver_baseline] controller: LOOKAHEAD (window={LOOKAHEAD_M:.0f}m, decel={LOOKAHEAD_DECEL_MS2:.1f} m/s²)")
+    if BRAKE_TEST_SPEED > 0:
+        print(f"[driver_baseline] controller: BRAKE_TEST (target {BRAKE_TEST_SPEED:.0f} km/h then full brake)")
+    elif LOOKAHEAD_M > 0:
+        print(f"[driver_baseline] controller: LOOKAHEAD (window={LOOKAHEAD_M:.0f}m, decel={LOOKAHEAD_DECEL_MS2:.1f} m/s^2)")
     else:
         print(f"[driver_baseline] controller: baseline (target speed: {TARGET_SPEED_KMH} km/h)")
     if SEGMENTS:
@@ -440,7 +509,31 @@ def main(argv: list[str] | None = None) -> int:
 
             last_cur_lap = cur_lap
 
-            action = drive_lookahead(sensors) if LOOKAHEAD_M > 0 else drive(sensors)
+            if BRAKE_TEST_SPEED > 0:
+                action = drive_brake_test(sensors)
+            elif LOOKAHEAD_M > 0:
+                action = drive_lookahead(sensors)
+            else:
+                action = drive(sensors)
+
+            if BRAKE_TEST_SPEED > 0 and BRAKE_TEST_STATE["phase"] == "DONE":
+                # log a few extra frames so analyze_brake_test has trailing
+                # context, then exit cleanly.
+                BRAKE_TEST_STATE.setdefault("done_ticks", 0)
+                BRAKE_TEST_STATE["done_ticks"] += 1
+                if BRAKE_TEST_STATE["done_ticks"] > 50:
+                    stop_reason = "brake_test complete"
+                    for k, v in action.items():
+                        client.R.d[k] = v
+                    client.respond_to_server()
+                    if logger is not None:
+                        logger.log_frame(
+                            sensors=sensors,
+                            action=action,
+                            controller_reason=_controller_reason(sensors, action),
+                            lap_number=current_lap_number,
+                        )
+                    break
             for k, v in action.items():
                 client.R.d[k] = v
             client.respond_to_server()
