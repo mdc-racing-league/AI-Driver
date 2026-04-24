@@ -338,6 +338,12 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
                         help="In lookahead mode, force brake pedal = 1.0 whenever any brake is "
                              "requested in the zone (kills the 0.3->0.9 ramp).  Use when the "
                              "car can't shed enough speed before corner entry.")
+    parser.add_argument("--laps", type=int, default=1, metavar="N",
+                        help="Target lap count.  When > 1, MAX_STEPS scales to ~10000 per lap, "
+                             "telemetry keeps logging across all laps (race_finalized only "
+                             "trips after the Nth lap), and a laps.csv summary is written to "
+                             "the run dir.  Set TORCS Quick Race lap count to a matching value. "
+                             "Default: 1.")
     return parser.parse_args(argv)
 
 
@@ -409,7 +415,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # drive() reads TARGET_SPEED_KMH at module scope, so override here when
     # --target-speed is passed. Keeps the experiment-sweep workflow one-line.
-    global TARGET_SPEED_KMH, SLOW_ZONES, SEGMENTS, LOOKAHEAD_M, LOOKAHEAD_DECEL_MS2, BRAKE_TEST_SPEED, FULL_PEDAL_BRAKE
+    global TARGET_SPEED_KMH, SLOW_ZONES, SEGMENTS, LOOKAHEAD_M, LOOKAHEAD_DECEL_MS2, BRAKE_TEST_SPEED, FULL_PEDAL_BRAKE, MAX_STEPS
     TARGET_SPEED_KMH = args.target_speed
     SLOW_ZONES = _parse_slow_zones(args.slow_zone)
     SEGMENTS = _load_segments(args.segments) if args.segments else []
@@ -417,6 +423,12 @@ def main(argv: list[str] | None = None) -> int:
     LOOKAHEAD_DECEL_MS2 = args.lookahead_decel
     BRAKE_TEST_SPEED = args.brake_test
     FULL_PEDAL_BRAKE = args.full_pedal_brake
+
+    target_laps = max(1, args.laps)
+    multi_lap = target_laps > 1
+    if multi_lap:
+        MAX_STEPS = max(MAX_STEPS, 10000 * target_laps + 5000)
+        print(f"[driver_baseline] multi-lap mode: target {target_laps} laps, MAX_STEPS={MAX_STEPS}")
 
     print(f"[driver_baseline] snakeoil3 path: {DEFAULT_GYM_TORCS_DIR}")
     if BRAKE_TEST_SPEED > 0:
@@ -491,7 +503,8 @@ def main(argv: list[str] | None = None) -> int:
                     lap_splits.append(last_lap)
                     print(f"[driver_baseline] LAP {len(lap_splits)} complete (lastLapTime): {last_lap:.3f}s")
                     current_lap_number = len(lap_splits) + 1
-                    race_finalized = True
+                    if not multi_lap or len(lap_splits) >= target_laps:
+                        race_finalized = True
                 last_lap_seen = last_lap
 
             if last_cur_lap > 30.0 and cur_lap < 2.0 and cur_lap < last_cur_lap - 10.0:
@@ -499,7 +512,8 @@ def main(argv: list[str] | None = None) -> int:
                     lap_splits.append(last_cur_lap)
                     print(f"[driver_baseline] LAP {len(lap_splits)} complete (curLapTime reset): {last_cur_lap:.3f}s")
                     current_lap_number = len(lap_splits) + 1
-                    race_finalized = True
+                    if not multi_lap or len(lap_splits) >= target_laps:
+                        race_finalized = True
 
             if cur_lap > 0.1:
                 race_started = True
@@ -594,6 +608,16 @@ def main(argv: list[str] | None = None) -> int:
                 logger.close(outcome=outcome)
             except Exception as exc:
                 print(f"[driver_baseline] warning: telemetry close failed: {exc}", file=sys.stderr)
+            if multi_lap and lap_splits:
+                try:
+                    laps_csv = logger.run_dir / "laps.csv"
+                    with laps_csv.open("w", encoding="utf-8") as fh:
+                        fh.write("lap_num,lap_time_seconds\n")
+                        for i, t in enumerate(lap_splits, 1):
+                            fh.write(f"{i},{t:.3f}\n")
+                    print(f"[driver_baseline] wrote {laps_csv} ({len(lap_splits)} laps)")
+                except Exception as exc:
+                    print(f"[driver_baseline] warning: laps.csv write failed: {exc}", file=sys.stderr)
         print(f"[driver_baseline] finished after {step} steps — {stop_reason}")
         if lap_splits:
             best = min(lap_splits)
