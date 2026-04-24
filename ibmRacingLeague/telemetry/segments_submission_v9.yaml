@@ -1,0 +1,325 @@
+# Corkscrew segment map — SUBMISSION CONFIG v9 (2026-04-24)
+# Derived from v8 (Run 032 DNF — two off-tracks).
+#
+# Run 032 failure modes:
+#   1. Off-track entering the s08 kink (elevation change at ~1950m).
+#      v8 had pushed s07 85->87 and held s08a at 102 — the elevation +
+#      faster carry into the kink exceeded line tolerance.
+#   2. Off-track on the last major corner (s13 hairpin).
+#      v8 had pushed s12 90->95, bringing s13 entry 5 km/h higher than
+#      v7 — and s13 was already peak |trackPos| 0.87 on Run 031. No
+#      margin left; went off.
+#
+# Deltas vs v8 (rollbacks in the two failure zones; rest of v8 held):
+#   s07  L  87 -> 85    (roll back to v7 — pre-s08 corner)
+#   s08a     102 -> 98  (conservative approach to kink + elevation)
+#   s12      95 -> 90   (roll back to v7 — reduce s13 entry speed)
+#   s13  L   62 -> 60   (extra margin on tight hairpin)
+#   s14      105 -> 100 (roll back — reduce s15 approach speed)
+#
+# Held from v8:
+#   s08c racing line exit_pos -0.45 (the v8 safety fix stays)
+#   straights still capped: s02 103, s04 103, s06 110, s10 108
+#   corners with margin: s01 84, s03 85, s05 87, s09 60, s11 87
+#   s08b (kink itself at 100), s08c (102), s15 (78)
+#
+# Risk: conservative on the two problem zones. If Run 033 is clean but
+# loses time vs Run 031's 156.586, the fix is surgical: push s08a first
+# (98 -> 100), then s12 (90 -> 92), never together.
+#
+# Estimated: Run 031 class (156-157s) but CLEAN. Then iterate.
+#
+# Schema version: v1
+
+schema_version: v1
+lap_length_m: 3610.0
+segments:
+  - id: s00_straight
+    kind: straight
+    start_m: 0.0
+    end_m: 405.0
+    target_speed_kmh: 95.0
+    entry_pos: 0.0
+    apex_pos: 0.1
+    exit_pos: 0.3
+    observed:
+      len_m: 405.0
+      speed_avg: 60.5
+      speed_min: 28.8
+      speed_max: 64.9
+      angle_peak_abs: 0.107
+      steer_peak_abs: 0.118
+      steer_mean_signed: 0.016
+
+  - id: s01_turn_L_475m
+    kind: corner
+    start_m: 405.0
+    end_m: 545.0
+    target_speed_kmh: 84.0
+    entry_pos: 0.4
+    apex_pos: -0.4
+    exit_pos: 0.2
+    observed:
+      len_m: 140.0
+      speed_avg: 64.8
+      speed_min: 64.7
+      speed_max: 65.0
+      angle_peak_abs: 0.131
+      steer_peak_abs: 0.304
+      steer_mean_signed: 0.201
+
+  - id: s02_straight
+    kind: straight
+    start_m: 545.0
+    end_m: 735.0
+    target_speed_kmh: 103.0
+    entry_pos: 0.2
+    apex_pos: 0.0
+    exit_pos: -0.3
+    observed:
+      len_m: 190.0
+      speed_avg: 64.8
+      speed_min: 64.7
+      speed_max: 64.9
+      angle_peak_abs: 0.071
+      steer_peak_abs: 0.077
+      steer_mean_signed: -0.025
+
+  - id: s03_turn_R_775m
+    kind: corner
+    start_m: 735.0
+    end_m: 815.0
+    target_speed_kmh: 85.0
+    entry_pos: -0.4
+    apex_pos: 0.4
+    exit_pos: -0.2
+    observed:
+      len_m: 80.0
+      speed_avg: 64.8
+      speed_min: 64.7
+      speed_max: 64.9
+      angle_peak_abs: 0.101
+      steer_peak_abs: 0.226
+      steer_mean_signed: -0.175
+
+  - id: s04_straight
+    kind: straight
+    start_m: 815.0
+    end_m: 1000.0
+    target_speed_kmh: 103.0
+    entry_pos: -0.2
+    apex_pos: -0.3
+    exit_pos: -0.4
+    observed:
+      len_m: 185.0
+      speed_avg: 64.8
+      speed_min: 64.8
+      speed_max: 64.9
+      angle_peak_abs: 0.083
+      steer_peak_abs: 0.048
+      steer_mean_signed: 0.003
+
+  - id: s05_turn_R_1040m
+    kind: corner
+    start_m: 1000.0
+    end_m: 1080.0
+    target_speed_kmh: 87.0
+    entry_pos: -0.4
+    apex_pos: 0.4
+    exit_pos: -0.2
+    observed:
+      len_m: 80.0
+      speed_avg: 64.8
+      speed_min: 64.7
+      speed_max: 65.0
+      angle_peak_abs: 0.058
+      steer_peak_abs: 0.167
+      steer_mean_signed: -0.134
+
+  - id: s06_straight
+    kind: straight
+    start_m: 1080.0
+    end_m: 1480.0
+    target_speed_kmh: 110.0
+    entry_pos: -0.2
+    apex_pos: 0.0
+    exit_pos: 0.3
+    observed:
+      len_m: 400.0
+      speed_avg: 64.8
+      speed_min: 64.7
+      speed_max: 64.9
+      angle_peak_abs: 0.07
+      steer_peak_abs: 0.04
+      steer_mean_signed: -0.006
+
+  - id: s07_turn_L_1540m
+    kind: corner
+    start_m: 1480.0
+    end_m: 1600.0
+    target_speed_kmh: 85.0
+    entry_pos: 0.4
+    apex_pos: -0.4
+    exit_pos: 0.2
+    observed:
+      len_m: 120.0
+      speed_avg: 64.2
+      speed_min: 63.5
+      speed_max: 64.8
+      angle_peak_abs: 0.064
+      steer_peak_abs: 0.173
+      steer_mean_signed: 0.131
+
+  # s08 split into three sub-segments for kink micro-zone
+  - id: s08a_straight
+    kind: straight
+    start_m: 1600.0
+    end_m: 1940.0
+    target_speed_kmh: 98.0
+    entry_pos: 0.2
+    apex_pos: 0.0
+    exit_pos: 0.0
+
+  - id: s08b_kink
+    kind: corner
+    start_m: 1940.0
+    end_m: 1960.0
+    target_speed_kmh: 100.0
+    entry_pos: 0.0
+    apex_pos: 0.0
+    exit_pos: 0.0
+
+  - id: s08c_straight
+    kind: straight
+    start_m: 1960.0
+    end_m: 2320.0
+    target_speed_kmh: 102.0
+    entry_pos: 0.0
+    apex_pos: -0.3
+    exit_pos: -0.45
+
+  - id: s09_turn_R_2605m
+    kind: corner
+    start_m: 2320.0
+    end_m: 2540.0
+    target_speed_kmh: 60.0
+    entry_pos: -0.45
+    apex_pos: 0.55
+    exit_pos: -0.3
+    observed:
+      len_m: 350.0
+      speed_avg: 64.0
+      speed_min: 58.9
+      speed_max: 65.0
+      angle_peak_abs: 0.433
+      steer_peak_abs: 0.657
+      steer_mean_signed: 0.042
+    notes: >
+      Run 013: start pulled back 2420->2380 to absorb Run 013's +15 km/h
+      entry speed from faster s08. End unchanged at 2540 (Run 009/012
+      proven). Apex is near 2500 per Run 011 post-mortem, so 160 m of
+      slow zone leaves ~120 m of coast-down from 100+ km/h -> ~50 km/h.
+      Run 012: 2420:2540 proved safe at 80 km/h entry (peak |trackPos|
+      0.67, v_min 59.4).
+
+  - id: s10_straight
+    kind: straight
+    start_m: 2540.0
+    end_m: 2945.0
+    target_speed_kmh: 108.0
+    entry_pos: -0.2
+    apex_pos: -0.3
+    exit_pos: -0.4
+    observed:
+      len_m: 165.0
+      speed_avg: 64.9
+      speed_min: 64.9
+      speed_max: 65.0
+      angle_peak_abs: 0.047
+      steer_peak_abs: 0.104
+      steer_mean_signed: 0.002
+
+  - id: s11_turn_R_2985m
+    kind: corner
+    start_m: 2945.0
+    end_m: 3025.0
+    target_speed_kmh: 87.0
+    entry_pos: -0.4
+    apex_pos: 0.4
+    exit_pos: -0.2
+    observed:
+      len_m: 80.0
+      speed_avg: 64.9
+      speed_min: 64.8
+      speed_max: 64.9
+      angle_peak_abs: 0.079
+      steer_peak_abs: 0.177
+      steer_mean_signed: -0.151
+
+  - id: s12_straight
+    kind: straight
+    start_m: 3025.0
+    end_m: 3180.0
+    target_speed_kmh: 90.0
+    entry_pos: -0.2
+    apex_pos: 0.1
+    exit_pos: 0.5
+    observed:
+      len_m: 220.0
+      speed_avg: 64.9
+      speed_min: 64.8
+      speed_max: 64.9
+      angle_peak_abs: 0.069
+      steer_peak_abs: 0.033
+      steer_mean_signed: 0.002
+
+  - id: s13_turn_L_3272m
+    kind: corner
+    start_m: 3180.0
+    end_m: 3300.0
+    target_speed_kmh: 60.0
+    entry_pos: 0.55
+    apex_pos: -0.55
+    exit_pos: 0.3
+    observed:
+      len_m: 55.0
+      speed_avg: 62.6
+      speed_min: 60.8
+      speed_max: 64.9
+      angle_peak_abs: 0.222
+      steer_peak_abs: 0.522
+      steer_mean_signed: 0.302
+
+  - id: s14_straight
+    kind: straight
+    start_m: 3300.0
+    end_m: 3605.0
+    target_speed_kmh: 100.0
+    entry_pos: 0.3
+    apex_pos: 0.15
+    exit_pos: 0.0
+    observed:
+      len_m: 305.0
+      speed_avg: 63.1
+      speed_min: 9.8
+      speed_max: 65.0
+      angle_peak_abs: 0.154
+      steer_peak_abs: 0.171
+      steer_mean_signed: -0.009
+
+  - id: s15_turn_L_3607m
+    kind: corner
+    start_m: 3605.0
+    end_m: 3610.0
+    target_speed_kmh: 78.0
+    entry_pos: 0.0
+    apex_pos: 0.0
+    exit_pos: 0.0
+    observed:
+      len_m: 5.0
+      speed_avg: 62.4
+      speed_min: 62.4
+      speed_max: 62.4
+      angle_peak_abs: 0.006
+      steer_peak_abs: 0.001
+      steer_mean_signed: -0.001

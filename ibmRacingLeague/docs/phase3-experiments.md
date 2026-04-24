@@ -458,3 +458,76 @@ Informed by Run 031 segment report:
 4. **Hold:** s00 (standing start), s08a/b/c speeds (kink microsite), s13 (tight at 0.87), s14 (acceleration-limited, target already ahead of achievable), s15 (5 m inactive).
 
 Estimated gain: **−2 to −3 s**. Target: sub-154 s.
+
+---
+
+## Session 2026-04-24 (late) — post-v7 exploration, Runs 032–035
+
+Ran four more laps trying to push past Run 031's 156.586 s anchor. **None of them produced a valid submission** (all either DNF'd or hit the damage counter via a corner cut). Run 031 remains the submission.
+
+### Run 032 — v8 (aggressive: s08c line fix + 12 deltas) — DNF
+
+Commit `ef4242b`. Applied the planned v8 package: `s08c` exit_pos `−0.55 → −0.45`, straights `s02/s04 103`, `s06 110`, `s10 108`, `s12 95`, corners `s01 84`, `s03 85`, `s05 87`, `s07 87`, `s09 60`, `s11 87`. **Off-track at s08 kink approach + off-track at s13 hairpin.** Two problems:
+
+1. `s07 85 → 87` plus held `s08a 102` carried too much speed through the elevation change at the kink (the 1940–1960 m crest).
+2. `s12 90 → 95` brought `s13` entry 5 km/h hotter than Run 031 (which already peaked `|trackPos| 0.87`). No margin left.
+
+### Run 033 — v9 (rollback both failure zones) — DNF at s13 apex
+
+Commit `b8398da`. Rolled back the two v8 zones that failed: `s07 87 → 85`, `s08a 102 → 98`, `s12 95 → 90`, `s13 62 → 60`, `s14 105 → 100`. Everything else held from v8.
+
+**Failure:** Still off at s13. Trace showed step 6000 lapTime 126.75 s at speed 64.1 / trackPos 0.12 (approaching s13), step 6200 at speed 65.1 / trackPos **−1.24** (off), step 6600 trackPos −3.60 (beyond recovery), terminal at trackPos −5.75. Even at target 60 km/h, the `s13` apex line at `−0.55` was too aggressive — car entered at 65, overshot the apex, left the track, couldn't recover.
+
+### Run 034 — v10 (hard s13 rollback) — 145.026 s* but 18 damages (s09 cut)
+
+Commit `969adee`. Aggressive fix on the s13 region: `s12 90 → 82`, `s13 60 → 52`, **`s13 apex_pos −0.55 → −0.40`**, `s13 exit_pos 0.3 → 0.15`, `s14 100 → 95`.
+
+**s13 fix worked** (peak `|trackPos|` 0.853, clean) — but **a new problem surfaced at s09**. With the racing line enabled and speed held at 60 km/h, the car cut the inside of the R-hairpin: peak `trackPos = +2.60` at 2489–2528 m. That shortcut skipped real track distance, producing an illegitimate 145.026 s clock time. Race Results screen showed **18 damages** (wall/barrier contact during the excursion). TORCS counted the lap, but it's not submission-clean.
+
+**Key lesson:** the racing-line interpolator + higher corner speeds opened a failure mode that peak-`|trackPos|` monitoring from prior runs didn't flag (because prior runs used centerline steering).
+
+### Run 035 — v11 (s09 apex pullback + s08c exit pullback) — 145.162 s, still cutting s09
+
+Commit `efba15b`. Surgical fix attempt: `s09 60 → 56`, **`s09 apex_pos +0.55 → +0.40`**, `s09 entry_pos −0.45 → −0.35`, `s08c exit_pos −0.45 → −0.35`.
+
+**Result:** s09 peak reduced `+2.60 → +2.21` — improvement but still **1.21 m past the right edge of the track**, still cutting. s08 peak `−1.23` unchanged (v11 edited `s08c` exit, but the off-track is at the kink itself / start of `s08c` where the racing line target is still 0.0 — wrong zone edited).
+
+### Session summary — why 145 s is a mirage
+
+Two things collide in tonight's late session:
+
+- **The racing-line interpolator is powerful enough to pull the car past the track edge** when apex_pos values reach ±0.55. Works great at the two hairpins if speed is low enough (s13 at 52 km/h, Run 034) — fails when speed is too high (s09 at 60 km/h, same run) because the controller requests steering lock (`|steer| = 1.0`) and physics won't bend that hard.
+- **The s08 kink has an unresolved elevation-induced left drift.** All six runs 030–035 show a peak `|trackPos|` in the 1.0–1.24 range in the 1940–1976 m zone, regardless of racing-line edits to `s08c`. The actual problem zone is `s08b` (1940–1960 m) where the line target is 0.0 but the car drifts to −1.2+. This is the elevation hypothesis from action-items #1b — deferred but now clearly load-bearing.
+
+### Progression summary (updated with late session)
+
+| Run | Config | Lap time | Damages | Submission-valid | Notes |
+|---|---|---:|---:|:---:|---|
+| 013 | v3 baseline | 165.666 | 0 | ✅ | Round-1 anchor |
+| 023 | r2a-v2 | 160.666 | 0 | ✅ | First sub-161 |
+| 030 | v6 | 160.606 | 0 | ✅ | Racing-line pays out |
+| **031** | **v7** | **156.586** | **0** | **✅ ANCHOR** | 1 transient touch at s08 kink |
+| 032 | v8 | DNF | — | ❌ | Off at s08 kink + s13 |
+| 033 | v9 | DNF | — | ❌ | Terminal off at s13 apex |
+| 034 | v10 | 145.026* | 18 | ❌ | Cut s09 hairpin (+2.60) |
+| 035 | v11 | 145.162* | ~18 | ❌ | Cut s09 again (+2.21) |
+
+**Current submission: Run 031 — 156.586 s, 0 damages, commit `5a25810`.**
+
+### Next session — v12 plan
+
+Surgical fix targeting the zones that actually failed in Runs 032–035:
+
+1. **s09 cut fix (primary):**
+   - `s09` speed 56 → 50 km/h (more margin)
+   - `s09` apex_pos +0.40 → +0.25 (keep target well inside the track)
+2. **s08 kink fix:**
+   - `s08b` apex_pos 0.0 → +0.20 (counter the elevation-driven left drift at the crest)
+   - `s08a` speed 98 → 92 (less energy entering the crest)
+3. **Hold the v10 s13 rollback** (it's proven clean at 52 km/h with −0.40 apex).
+
+If v12 finishes damages=0, iterate back up: s09 50 → 53, s08a 92 → 95, see where the ceiling is. Expected clean lap: 150–155 s range.
+
+### Stretch — resolve elevation hypothesis properly
+
+Every iteration at the kink has been empirical. Time to run the calibration lap + `scripts/elevation_profile.py` analyzer that's been sitting in action-items #1b since 2026-04-23 and get a quantitative profile of the 1940–1960 m zone. That's the only way to stop re-discovering the left-drift on every config revision.
