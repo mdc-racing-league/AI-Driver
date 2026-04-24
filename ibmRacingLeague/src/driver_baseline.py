@@ -578,6 +578,10 @@ def main(argv: list[str] | None = None) -> int:
                     f"trackPos={sensors.get('trackPos', 0):.2f} "
                     f"lapTime={cur_lap:.2f}"
                 )
+
+            if race_finalized:
+                stop_reason = f"target laps reached ({len(lap_splits)}/{target_laps})"
+                break
     except KeyboardInterrupt:
         stop_reason = "KeyboardInterrupt"
         print("\n[driver_baseline] interrupted by user")
