@@ -130,11 +130,13 @@ def test_load_segments_basic(tmp_path):
     p = tmp_path / "segments.yaml"
     p.write_text(_SEGMENTS_YAML)
     segs = db._load_segments(p)
-    assert segs == [
+    assert [(s["start_m"], s["end_m"], s["target_speed_kmh"]) for s in segs] == [
         (0.0, 405.0, 80.0),
         (405.0, 545.0, 75.0),
         (2430.0, 2780.0, 50.0),
     ]
+    assert all(s["entry_pos"] == 0.0 and s["apex_pos"] == 0.0 and s["exit_pos"] == 0.0
+               for s in segs)
 
 
 def test_load_segments_ignores_unrelated_top_level(tmp_path):
@@ -148,7 +150,8 @@ def test_segments_drive_target_speed(tmp_path):
     _reset()
     p = tmp_path / "segments.yaml"
     p.write_text(_SEGMENTS_YAML)
-    db.SEGMENTS = db._load_segments(p)
+    db.SEGMENTS = [(s["start_m"], s["end_m"], s["target_speed_kmh"])
+                   for s in db._load_segments(p)]
     db.TARGET_SPEED_KMH = 55.0  # should be shadowed by segment coverage
     assert db.target_speed_for({"distFromStart": 200.0}) == 80.0
     assert db.target_speed_for({"distFromStart": 500.0}) == 75.0
