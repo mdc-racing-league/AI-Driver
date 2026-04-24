@@ -395,3 +395,66 @@ DNF at 1948–2011 m with peak `trackPos` −4.81. Three excursions clustered at
 See [`docs/racing-methodology.md`](./racing-methodology.md) §5 for the two competing failure-mode explanations (pure traction-circle saturation vs weight-transfer grip loss over a crest) and the decisive experiment that distinguishes them.
 
 **If rejected:** the kink is geometric; `segments.yaml` needs a hand-placed micro-corner at 1900:2000 and `derive_segments.py` needs a lower `corner_steer_abs` threshold or a bin on second derivative of heading.
+
+---
+
+## Session 2026-04-24 — Racing-line v5 → v7 PB cascade
+
+All runs below use the same `driver_baseline.py` (lookahead + full-pedal brake), but introduce a **racing-line interpolator** (`entry_pos → apex_pos → exit_pos` per segment) that pulls steering toward a target `trackPos` instead of centerline. Four config snapshots (`segments_submission_v4.yaml` → `v7.yaml`) staged under `telemetry/`.
+
+### Run 026 — v2 (all-straights-push) — 167.146 s (clean)
+
+**−5.074 s vs Run 013's 165.666 s** by raising *every* straight target simultaneously. Pure speed push; lap still conservative in corners. No off-tracks, 0 damages. Proved the straight-side headroom is real across the whole track, not just one section.
+
+### Run 027 — v3 (speed + kink fix) — 165.626 s
+
+Slight regression vs Run 026 — a cautious step back to reconfirm Run 023-equivalent corner discipline while keeping most straight gains.
+
+### Run 028 — v4 (speeds held) — ~165 s class
+
+Committed v4 config (commit `dd85ef2`). Lap time within noise of Run 027; v4 became the baseline for the line-interpolation experiment.
+
+### Run 029 — v5 (racing-line introduced) — 165.826 s (clean)
+
+Commit `45f81ee` adds `entry_pos` / `apex_pos` / `exit_pos` per segment and a steering law that pulls toward the interpolated target instead of centerline. **Racing-line validated** — peak `|trackPos|` lifted from Run 023's ~0.1 range to **0.56 / 0.78 / 0.82** on s05 / s01 / s13 respectively (car now *using* track width). **But no time gain** — corner speed caps were still the v3 values so the lookahead brake target was unchanged. Line validated; needs corner-speed bumps to translate into lap time.
+
+### Run 030 — v6 (line + corner-speed bumps) — 🏆 160.606 s PB (clean)
+
+Commit `67cb401`. Held v5's racing-line and raised corner caps (s01/s03 75→80, s05/s07/s11 78→82, s09 50→55, s13 58→62). **−5.020 s vs v3** and the first sub-161 clean lap. Racing line finally paying out: corners taken at higher speed with `|trackPos|` margins still well under 1.0 (peak s13 = 0.868).
+
+### Run 031 — v7 (straight-cap pushes + small corner bumps) — 🏆 156.586 s PB (clean, 1 boundary touch)
+
+Commit `5a25810`. Straights at cap in v6 (s02 95 → **100**, s04 95 → **100**, s06 105 → **108**, s10 100 → **105**, s12 80 → **90**, s14 100 → **105**) and +2–3 km/h on minor corners. **−4.020 s vs Run 030**, cumulative **−9.040 s vs v3 baseline**. One transient boundary excursion: s08 kink region touched `|trackPos| 1.02` for ~5 m at 1953–1957 m (logged by `find_offtracks.py`, inside TORCS's internal tolerance — 0 damages, lap counted). v8 must pull the `s08c` exit line back from −0.55 before any further s08 target push.
+
+### Progression summary
+
+| Run | Config | Lap time | Δ vs prior clean PB | Notes |
+|---|---|---:|---:|---|
+| 013 | v3 baseline | 165.666 | — | Round-1 reference, segment caps only |
+| 023 | r2a-v2 | 160.666 | −5.000 | First sub-161, full-pedal brake + narrow hairpins |
+| 025 | +s08 102 | 160.326* | dirty | Had 1 off-track; not submission-safe |
+| 026 | v2 (straights) | 167.146 | — | All-straights experiment, back-off from aggressive corners |
+| 030 | v6 (line + bumps) | **160.606** | flat | Racing-line interpolator pays out |
+| 031 | v7 (straight push) | **156.586** | **−4.020** | New PB; s08 border touch to clean up in v8 |
+
+Current submission anchor: **Run 031 — 156.586 s, 0 damages** (archive to push from Windows).
+
+---
+
+## v8 plan — edge-of-map cleanup + remaining speed
+
+Informed by Run 031 segment report:
+
+1. **s08c exit line: −0.55 → −0.45** (primary safety fix — the Run 031 boundary touch).
+2. **Straight pushes that hit cap in Run 031:**
+   - `s02` 100 → 103 (max hit 100.1 exactly)
+   - `s04` 100 → 103 (max hit 100.1)
+   - `s06` 108 → 110 (max hit 108.1)
+   - `s10` 105 → 108 (max hit 105.2)
+   - `s12` 90 → 95 (max hit 90.1)
+3. **Small corner pushes (trackPos still has margin):**
+   - `s01` 82 → 84, `s03` 83 → 85, `s05` 85 → 87
+   - `s07` 85 → 87, `s09` 58 → 60, `s11` 85 → 87
+4. **Hold:** s00 (standing start), s08a/b/c speeds (kink microsite), s13 (tight at 0.87), s14 (acceleration-limited, target already ahead of achievable), s15 (5 m inactive).
+
+Estimated gain: **−2 to −3 s**. Target: sub-154 s.
